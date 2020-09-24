@@ -1,2 +1,1 @@
-include "grpc-infra"
-include 'service-generator'
+rootProject.name = 'th2-grpc-service-generator'

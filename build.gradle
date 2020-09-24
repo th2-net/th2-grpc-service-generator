@@ -1,109 +1,17 @@
-buildscript {
-    repositories {
-        mavenCentral()
-        mavenLocal()
-    }
-    
-    ext {
-        kotlin_version = "1.3.72"
-    }
-
-    dependencies {
-        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:${kotlin_version}"
-    }
-}
-
 plugins {
-    id 'com.google.protobuf' version '0.8.8' apply false
-    id "com.jfrog.artifactory" version '4.15.1' apply false
-    id 'org.jetbrains.kotlin.jvm' version "${kotlin_version}"
-}
-
-allprojects {
-    apply plugin: 'java'
-    apply plugin: 'maven-publish'
-    apply plugin: 'com.jfrog.artifactory'
-
-    ext {
-        sharedDir           = file("${project.rootDir}/shared")
-    }
-
-    group = 'com.exactpro.th2'
-    version = release_version
-
-    sourceCompatibility = 11
-    targetCompatibility = 11
-
-    dependencies {
-        compileOnly 'org.projectlombok:lombok:1.18.12'
-        annotationProcessor 'org.projectlombok:lombok:1.18.12'
-    }
-
-    repositories {
-        maven {
-            name 'MavenLocal'
-            url sharedDir
-        }
-        mavenCentral()
-        maven {
-            name 'Artifactory snapshot'
-            url 'http://artifactory5.exp.exactpro.com/artifactory/libs-snapshot'
-        }
-        mavenLocal()
-
-        configurations.all {
-            resolutionStrategy.cacheChangingModulesFor 0, 'seconds'
-            resolutionStrategy.cacheDynamicVersionsFor 0, 'seconds'
-        }
-    }
-
-    java {
-        withJavadocJar()
-        withSourcesJar()
-    }
-
-    javadoc {
-        (options as StandardJavadocDocletOptions).addBooleanOption("html5", true)
-    }
-
-    publishing {
-        publications {
-            mavenJava(MavenPublication) {
-                from components.java
-            }
-        }
-
-        repositories {
-            maven {
-                name = 'localRepo'
-                url = sharedDir
-            }
-        }
-    }
-
-    artifactory {
-        publish {
-            contextUrl = "${artifactory_url}"
-            repository {
-                repoKey = "${artifactory_deploy_repo_key}" // The Artifactory repository key to publish to
-                username = "${artifactory_user}" // The publisher user name
-                password = "${artifactory_password}" // The publisher password
-            }
-            defaults {
-                // Reference to Gradle publications defined in the build script.
-                // This is how we tell the Artifactory Plugin which artifacts should be
-                // published to Artifactory.
-                publications('mavenJava')
-                publishArtifacts = true
-                publishBuildInfo = true
-                // Properties to be attached to the published artifacts.
-                publishPom = true
-            }
-        }
-    }
+    id "com.jfrog.artifactory" version '4.15.1'
+    id 'org.jetbrains.kotlin.jvm' version "1.3.72"
+    id 'java-gradle-plugin'
+    id 'antlr'
+    id 'java'
+    id 'maven-publish'
 }
 
 ext {
+    sharedDir           = file("${project.rootDir}/shared")
+
+    grpcVersion         = '1.29.0'
+
     slf4jVersion        = '1.7.30'
 
     grpcVersion         = '1.27.1'
@@ -115,45 +23,118 @@ ext {
     jacksonVersion      = "2.11.2"
 }
 
+repositories {
+    maven {
+        name 'MavenLocal'
+        url sharedDir
+    }
+    mavenCentral()
+    maven {
+        name 'Artifactory snapshot'
+        url 'http://artifactory5.exp.exactpro.com/artifactory/libs-snapshot'
+    }
+    maven {
+        name 'Artifactory release'
+        url 'http://artifactory5.exp.exactpro.com/artifactory/libs-release'
+    }
+    mavenLocal()
+
+    configurations.all {
+        resolutionStrategy.cacheChangingModulesFor 0, 'seconds'
+        resolutionStrategy.cacheDynamicVersionsFor 0, 'seconds'
+    }
+}
+
+group = 'com.exactpro.th2'
+version = release_version
+
+sourceCompatibility = 11
+targetCompatibility = 11
+
+sourceSets {
+    main.kotlin.srcDirs += "src/main/kotlin"
+    main.java.srcDirs += "build/generated-src/antlr/main"
+}
+
+
 dependencies {
-    compile(project(':grpc-infra'))
-    compile(project(':service-generator'))
+    compileOnly 'org.projectlombok:lombok:1.18.12'
+    annotationProcessor 'org.projectlombok:lombok:1.18.12'
 
-    compile "com.rabbitmq:amqp-client:5.8.0"
+    compile "io.grpc:grpc-stub:${grpcVersion}"
 
-    compile "org.jetbrains:annotations:20.0.0"
+    antlr group: 'org.antlr', name: 'antlr4', version: '4.5'
 
-    compile "org.apache.commons:commons-lang3:3.8.1"
-    compile "org.apache.commons:commons-collections4:4.4"
-    compile "commons-cli:commons-cli:1.4"
+    compile group: 'org.slf4j', name: 'slf4j-api', version: '1.7.30'
 
-    compile "com.fasterxml.jackson.core:jackson-core:${jacksonVersion}"
-    compile "com.fasterxml.jackson.core:jackson-databind:${jacksonVersion}"
-    compile "com.fasterxml.jackson.core:jackson-annotations:${jacksonVersion}"
-    compile "com.fasterxml.jackson.datatype:jackson-datatype-jsr310:${jacksonVersion}"
-    compile "com.fasterxml.jackson.dataformat:jackson-dataformat-yaml:${jacksonVersion}"
-    compile "com.fasterxml.jackson.module:jackson-module-kotlin:${jacksonVersion}"
+    testImplementation("org.junit.jupiter:junit-jupiter-api:5.6.1")
+    testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine:5.6.1")
+}
 
-    compile "org.jetbrains.kotlin:kotlin-stdlib:${kotlin_version}"
-    compile "org.jetbrains.kotlin:kotlin-stdlib-jdk8:${kotlin_version}"
+jar {
+    from {
+        configurations.compile.collect { it.isDirectory() ? it : zipTree(it) }
+    }
+}
 
-    compile 'com.fasterxml.uuid:java-uuid-generator:4.0.1'
+java {
+    withJavadocJar()
+    withSourcesJar()
+}
 
-    compile "org.slf4j:slf4j-log4j12:${slf4jVersion}"
-    compile "org.slf4j:slf4j-api:${slf4jVersion}"
-
-    testImplementation 'junit:junit:4.12'
+javadoc {
+    (options as StandardJavadocDocletOptions).addBooleanOption("html5", true)
 }
 
 publishing {
     publications {
         mavenJava(MavenPublication) {
-            artifactId 'th2-common'
+            from components.java
+        }
+    }
+
+    repositories {
+        maven {
+            name = 'localRepo'
+            url = sharedDir
         }
     }
 }
-sourceSets {
-    main.kotlin.srcDirs += "src/main/kotlin"
+
+artifactory {
+    publish {
+        contextUrl = "${artifactory_url}"
+        repository {
+            repoKey = "${artifactory_deploy_repo_key}" // The Artifactory repository key to publish to
+            username = "${artifactory_user}" // The publisher user name
+            password = "${artifactory_password}" // The publisher password
+        }
+        defaults {
+            // Reference to Gradle publications defined in the build script.
+            // This is how we tell the Artifactory Plugin which artifacts should be
+            // published to Artifactory.
+            publications('mavenJava')
+            publishArtifacts = true
+            publishBuildInfo = true
+            // Properties to be attached to the published artifacts.
+            publishPom = true
+        }
+    }
+}
+
+generateGrammarSource {
+    arguments += ["-package", "com.exactpro.th2.proto.service.generator.core.antlr"]
+}
+
+compileJava.dependsOn.add('generateGrammarSource')
+
+gradlePlugin {
+    plugins {
+        serviceGeneratorPlugin {
+            id = 'com.exactpro.th2.service-generator'
+            implementationClass = 'com.exactpro.th2.proto.service.generator.plugin.ServiceGeneratorPlugin'
+        }
+    }
 }
 
 compileKotlin {
