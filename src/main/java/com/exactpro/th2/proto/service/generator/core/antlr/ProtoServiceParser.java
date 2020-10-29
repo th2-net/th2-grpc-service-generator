@@ -1,12 +1,12 @@
 /*
  * Copyright 2020-2020 Exactpro (Exactpro Systems Limited)
- * 
+ *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -17,84 +17,124 @@ package com.exactpro.th2.proto.service.generator.core.antlr;
 
 import com.exactpro.th2.proto.service.generator.core.antlr.descriptor.MethodDescriptor;
 import com.exactpro.th2.proto.service.generator.core.antlr.descriptor.ServiceDescriptor;
+import com.exactpro.th2.proto.service.generator.core.antlr.descriptor.ServiceParserContext;
 import com.exactpro.th2.proto.service.generator.core.antlr.descriptor.TypeDescriptor;
-import org.antlr.v4.runtime.ANTLRFileStream;
+
+import org.antlr.v4.runtime.ANTLRInputStream;
 import org.antlr.v4.runtime.CommonTokenStream;
 import org.antlr.v4.runtime.tree.ParseTree;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.FileInputStream;
 import java.io.IOException;
+import java.io.InputStream;
+import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.*;
 import java.util.function.BiConsumer;
+import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
 public class ProtoServiceParser {
-
     private static final Logger logger = LoggerFactory.getLogger(ProtoServiceParser.class);
-
-
     private static final String PROTO_EXTENSION = ".proto";
 
+    private static final String PROTO_PACKAGE_ALIAS = "package";
+    private static final String PROTO_IMPORT_ALIAS = "import";
+    private static final String PROTO_OPTION_ALIAS = "option";
+    private static final String PROTO_JAVA_PACKAGE_ALIAS = "java_package";
     private static final String PROTO_MSG_ALIAS = "message";
-
     private static final String PROTO_SERVICE_ALIAS = "service";
 
-    private static final String PROTO_OPTION_ALIAS = "option";
-
-    private static final String PROTO_PACKAGE_ALIAS = "java_package";
-
     private static final String GOOGLE_PROTO_PACKAGE = "google.protobuf";
-
     private static final String GOOGLE_PROTO_JAVA_PACKAGE = "com." + GOOGLE_PROTO_PACKAGE;
 
 
     public static List<ServiceDescriptor> getServiceDescriptors(Path protoDir) throws IOException {
 
         var protoFiles = loadProtoFiles(protoDir);
-
-        Map<String, String> messageToPackage = new HashMap<>();
-        List<ServiceDescriptor> serviceDescriptors = new ArrayList<>();
+        ServiceParserContext context = new ServiceParserContext();
+        context.addAutoReplacedPackage(GOOGLE_PROTO_PACKAGE, GOOGLE_PROTO_JAVA_PACKAGE);
 
         for (var protoFile : protoFiles) {
-            logger.info("Parsing '{}' file", protoFile.getFileName());
+            Path fileName = protoFile.getFileName();
+            logger.info("Parsing '{}' file", fileName);
 
-            Protobuf3Lexer lexer = new Protobuf3Lexer(new ANTLRFileStream(protoFile.toString()));
-            Protobuf3Parser parser = new Protobuf3Parser(new CommonTokenStream(lexer));
-            parser.removeErrorListeners();
-            Protobuf3Parser.ProtoContext protoTree = parser.proto();
-
-            // StringBuilder for apply reference behavior
-            var packageName = new StringBuilder();
-
-            List<String> comments = new ArrayList<>();
-
-            for (var child : protoTree.children) {
-
-                extractPackage(child, packageName);
-
-                extractComment(child, comments);
-
-                extractService(child, packageName.toString(), comments, serviceDescriptors);
-
-                extractMessage(child, packageName.toString(), messageToPackage);
-
+            try (FileInputStream inputStream = new FileInputStream(protoFile.toFile())) {
+                parseInputStream(inputStream, fileName.toString(), context);
             }
         }
 
-        processEmbeddedMessages(serviceDescriptors, messageToPackage);
-
-        setupMsgPackages(serviceDescriptors, messageToPackage);
-
-        if (serviceDescriptors.isEmpty()) {
-            logger.warn("No services was found in provided proto files");
-        }
-
-        return serviceDescriptors;
+        return context.getServiceForGeneration(protoFiles.stream().map(it -> it.getFileName().toString()).collect(Collectors.toList()));
     }
 
+    private static void parseInputStream(InputStream inputStream, String fileName, ServiceParserContext context) throws IOException {
+        Protobuf3Lexer lexer = new Protobuf3Lexer(new ANTLRInputStream(inputStream));
+        Protobuf3Parser parser = new Protobuf3Parser(new CommonTokenStream(lexer));
+        parser.removeErrorListeners();
+        Protobuf3Parser.ProtoContext protoTree = parser.proto();
+
+        // StringBuilder for apply reference behavior
+        String javaPackageName = null;
+
+        String packageName = null;
+
+        List<String> comments = new ArrayList<>();
+
+        for (var child : protoTree.children) {
+
+            extractImport(child, context);
+
+            var tmpPackageName = extractPackage(child);
+            if (tmpPackageName != null) {
+                packageName = tmpPackageName;
+            }
+
+
+            var tmpJavaPackageName = extractJavaPackage(child);
+            if (tmpJavaPackageName != null) {
+                javaPackageName = tmpJavaPackageName;
+            }
+
+            extractComment(child, comments);
+
+            extractService(child, javaPackageName, comments, service -> context.addService(fileName, service));
+
+            String finalPackageName = packageName;
+            String finalJavaPackageName = javaPackageName;
+            extractMessage(child, msg -> context.addType(TypeDescriptor.builder().name(msg).packageName(finalPackageName).build(), finalJavaPackageName, msg));
+        }
+    }
+
+    private static void extractImport(ParseTree child, ServiceParserContext context) {
+        if (child.getChildCount() == 3 && child.getChild(0).getText().equals(PROTO_IMPORT_ALIAS)) {
+            var resourseName = child.getChild(1).getText();
+            resourseName = resourseName.substring(1, resourseName.length() - 1);
+
+            if (!extractPackageName(resourseName, '/').replace('/', '.').equals(GOOGLE_PROTO_PACKAGE)) {
+                try {
+                    URL resource = Thread.currentThread().getContextClassLoader().getResource(resourseName);
+                    if (resource != null) {
+                        String fileName = Path.of(resource.getFile()).getFileName().toString();
+                        parseInputStream(resource.openStream(), fileName, context);
+                    } else {
+                        logger.warn("Can not find resource with name = {}", resourseName);
+                    }
+                } catch (Exception e) {
+                    logger.warn("Can not parse resource with name = {}",  resourseName);
+                }
+            }
+        }
+    }
+
+    private static String extractPackage(ParseTree node) {
+        if (node.getChildCount() == 3 && node.getChild(0).getText().equals(PROTO_PACKAGE_ALIAS)) {
+                return node.getChild(1).getText();
+        }
+        return null;
+    }
 
     private static List<Path> loadProtoFiles(Path protoDir) throws IOException {
         Objects.requireNonNull(protoDir, "Proto files directory path cannot be null!");
@@ -120,57 +160,6 @@ public class ProtoServiceParser {
         return protoFiles;
     }
 
-    private static void processEmbeddedMessages(List<ServiceDescriptor> serviceDesc, Map<String, String> messageToPackage) {
-        for (var sDesc : serviceDesc) {
-            for (var method : sDesc.getMethods()) {
-
-                var types = new ArrayList<>(method.getRequestTypes());
-
-                var respType = method.getResponseType();
-
-                types.add(respType);
-
-                for (var type : types) {
-
-                    var respTypeName = type.getName();
-
-                    if (respTypeName.contains(GOOGLE_PROTO_PACKAGE)) {
-                        var parts = respTypeName.split("\\.");
-                        respTypeName = parts[parts.length - 1];
-                        type.setName(respTypeName);
-                        messageToPackage.put(respTypeName, GOOGLE_PROTO_JAVA_PACKAGE);
-                    }
-
-                }
-
-            }
-        }
-    }
-
-    private static void setupMsgPackages(List<ServiceDescriptor> serviceDesc, Map<String, String> messageToPackage) {
-        for (var sDesc : serviceDesc) {
-            for (var method : sDesc.getMethods()) {
-
-                var respType = method.getResponseType();
-
-                var respTypeName = respType.getName();
-
-                var respPackageName = messageToPackage.get(respTypeName);
-
-                checkExistence(respTypeName, respPackageName);
-
-                respType.setPackageName(respPackageName);
-
-                for (var reqType : method.getRequestTypes()) {
-                    var reqTypeName = reqType.getName();
-                    var reqPackageName = messageToPackage.get(reqTypeName);
-                    checkExistence(reqTypeName, reqPackageName);
-                    reqType.setPackageName(reqPackageName);
-                }
-            }
-        }
-    }
-
     private static void checkExistence(String msgName, String packageName) {
         if (Objects.isNull(packageName)) {
             throw new IllegalStateException(String.format("Message<%s> definition " +
@@ -185,25 +174,24 @@ public class ProtoServiceParser {
         }
     }
 
-    private static void extractPackage(ParseTree node, StringBuilder currentPackage) {
+    private static String extractJavaPackage(ParseTree node) {
         if (node.getChildCount() > 3) {
             var option = node.getChild(0).getText();
             var optionName = node.getChild(1).getText();
             var value = node.getChild(3).getText();
 
-            if (option.equals(PROTO_OPTION_ALIAS)
-                    && optionName.equals(PROTO_PACKAGE_ALIAS)
-                    && currentPackage.toString().isEmpty()) {
-                currentPackage.append(value.replace("\"", "").replace("'", ""));
+            if (option.equals(PROTO_OPTION_ALIAS) && optionName.equals(PROTO_JAVA_PACKAGE_ALIAS)) {
+                return value.replace("\"", "").replace("'", "");
             }
         }
+        return null;
     }
 
     private static void extractService(
             ParseTree node,
             String packageName,
             List<String> comments,
-            List<ServiceDescriptor> serviceDescs
+            Consumer<ServiceDescriptor> serviceConsumer
     ) {
         extractEntity(node, PROTO_SERVICE_ALIAS, (serviceName, entityNode) -> {
 
@@ -217,15 +205,14 @@ public class ProtoServiceParser {
 
             comments.clear();
 
-            serviceDescs.add(serviceDesc);
+            serviceConsumer.accept(serviceDesc);
         });
     }
 
     private static void extractMessage(
             ParseTree node,
-            String packageName,
-            Map<String, String> messageToPackage) {
-        extractEntity(node, PROTO_MSG_ALIAS, (msgName, entityNode) -> messageToPackage.put(msgName, packageName));
+            Consumer<String> messageConsumer) {
+        extractEntity(node, PROTO_MSG_ALIAS, (msgName, entityNode) -> messageConsumer.accept(msgName));
     }
 
     private static void extractEntity(
@@ -275,8 +262,9 @@ public class ProtoServiceParser {
             var methodRequestType = methodNode.getChild(methodRequestTypeIndex).getText();
             var methodResponseType = methodNode.getChild(methodResponseTypeIndex).getText();
 
-            var rqTypeDesc = TypeDescriptor.builder().name(methodRequestType).build();
-            var respTypeDesc = TypeDescriptor.builder().name(methodResponseType).build();
+
+            var rqTypeDesc = createType(methodRequestType);
+            var respTypeDesc = createType(methodResponseType);
 
             var methodDesc = MethodDescriptor.builder()
                     .comments(new ArrayList<>(comments))
@@ -310,5 +298,21 @@ public class ProtoServiceParser {
                 .replace("*/", "")
                 .replace("//", "")
                 .strip();
+    }
+
+    private static TypeDescriptor createType(String fullName) {
+        int endPackageIndex = fullName.lastIndexOf('.');
+        var builder = TypeDescriptor.builder();
+        if (endPackageIndex > 0) {
+            builder.packageName(fullName.substring(0, endPackageIndex)).name(fullName.substring(endPackageIndex + 1)).build();
+        } else {
+            builder.name(fullName);
+        }
+        return builder.build();
+    }
+
+    private static String extractPackageName(String fullName, char delimeter) {
+        int endPackageIndex = fullName.lastIndexOf(delimeter);
+        return endPackageIndex > 0 ? fullName.substring(0, endPackageIndex) : null;
     }
 }

@@ -41,8 +41,15 @@ sourceCompatibility = 11
 targetCompatibility = 11
 
 sourceSets {
-    main.kotlin.srcDirs += "src/main/kotlin"
-    main.java.srcDirs += "build/generated-src/antlr/main"
+    main {
+        kotlin {
+            srcDirs=["src/main/kotlin"]
+        }
+        
+        java {
+            srcDirs=["src/main/java", "build/generated-src/antlr/main"]
+        }
+    }
 }
 
 
