@@ -26,6 +26,8 @@ import java.util.stream.Collectors;
 import org.gradle.api.Plugin;
 import org.gradle.api.Project;
 import org.gradle.api.Task;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.exactpro.th2.proto.service.generator.core.antlr.ProtoServiceParser;
 import com.exactpro.th2.proto.service.generator.core.antlr.ServiceClassGenerator;
@@ -41,6 +43,8 @@ public class ServiceGeneratorPlugin implements Plugin<Project> {
 
     private static final String CONFIGURATION_APP_CLASSPATH = "compileClasspath";
 
+    private static final Logger logger = LoggerFactory.getLogger(ServiceGeneratorPlugin.class);
+
     @Override
     public void apply(Project project) {
 
@@ -54,17 +58,16 @@ public class ServiceGeneratorPlugin implements Plugin<Project> {
 
     @SneakyThrows
     private void generateService(Project project, Task task, GenServiceExt extension) {
+        logger.info("Test");
 
-        var urls = project
+        var urls = Arrays.asList(project
                 .getConfigurations()
                 .getByName(CONFIGURATION_APP_CLASSPATH)
-                .getAllArtifacts()
-                .getFiles()
-                .getFiles()
+                .getAsPath().split(":"))
                 .stream()
                 .map(it -> {
                     try {
-                        return it.toURI().toURL();
+                        return Path.of(it).toUri().toURL();
                     } catch (MalformedURLException e) {
                         throw new IllegalStateException("Can not convert file to url = " + it.toString());
                     }
