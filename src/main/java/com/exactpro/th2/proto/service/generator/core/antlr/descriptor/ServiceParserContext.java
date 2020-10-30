@@ -61,6 +61,7 @@ public class ServiceParserContext {
                             .methods(it.getMethods()
                                     .stream()
                                     .map(method -> MethodDescriptor.builder()
+                                            .comments(method.getComments())
                                             .name(method.getName())
                                             .requestTypes(method.getRequestTypes().stream().map(requestType -> changeTypePackageName(requestType)).collect(Collectors.toList()))
                                             .responseType(changeTypePackageName(method.getResponseType())).build()

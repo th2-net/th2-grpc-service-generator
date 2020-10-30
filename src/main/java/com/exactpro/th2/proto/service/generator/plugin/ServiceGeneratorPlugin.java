@@ -27,6 +27,7 @@ import org.gradle.api.Plugin;
 import org.gradle.api.Project;
 import org.gradle.api.Task;
 
+import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -55,6 +56,12 @@ public class ServiceGeneratorPlugin implements Plugin<Project> {
 
         var genDir = project.file(settings.getOutDir()).toPath();
 
+        generate(protoDir, genDir);
+
+    }
+
+    @SneakyThrows
+    protected void generate(Path protoDir, Path genDir) {
         var serviceDescriptors = ProtoServiceParser.getServiceDescriptors(protoDir);
 
         addSyncStubAnnotation(serviceDescriptors);
@@ -66,11 +73,10 @@ public class ServiceGeneratorPlugin implements Plugin<Project> {
         serviceDescriptors.addAll(asyncServiceDescriptors);
 
         ServiceClassGenerator.generate(genDir, serviceDescriptors);
-
     }
 
 
-    private ServiceDescriptor toAsync(ServiceDescriptor sd) {
+    protected ServiceDescriptor toAsync(ServiceDescriptor sd) {
 
         var asd = ServiceDescriptor.newInstance(sd);
 
@@ -104,7 +110,7 @@ public class ServiceGeneratorPlugin implements Plugin<Project> {
         return asd;
     }
 
-    private void addSyncStubAnnotation(List<ServiceDescriptor> sds) {
+    protected void addSyncStubAnnotation(List<ServiceDescriptor> sds) {
         sds.forEach(sd -> sd.getAnnotations().add(
                 AnnotationDescriptor.builder()
                         .name("GrpcStub")
@@ -114,7 +120,7 @@ public class ServiceGeneratorPlugin implements Plugin<Project> {
         ));
     }
 
-    private String createStubClass(ServiceDescriptor sd) {
+    protected String createStubClass(ServiceDescriptor sd) {
         return String.join(".", List.of(
                 sd.getPackageName(),
                 sd.getName() + "Grpc",
@@ -122,7 +128,7 @@ public class ServiceGeneratorPlugin implements Plugin<Project> {
         ));
     }
 
-    private void validateSettings(GenServiceSettingsExt settings) {
+    protected void validateSettings(GenServiceSettingsExt settings) {
 
         if (isEmpty(settings.getOutDir())) {
             throw new RuntimeException("Target directory path for generated source cannot be empty!");
@@ -134,7 +140,7 @@ public class ServiceGeneratorPlugin implements Plugin<Project> {
 
     }
 
-    private boolean isEmpty(String str) {
+    protected boolean isEmpty(String str) {
         return str == null || str.length() == 0;
     }
 
