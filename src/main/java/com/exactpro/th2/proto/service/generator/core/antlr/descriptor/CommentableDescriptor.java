@@ -31,7 +31,7 @@ public abstract class CommentableDescriptor {
 
 
     public String getCommentsAsJavaDoc(String indent) {
-        if (comments.isEmpty()) {
+        if (comments == null || comments.isEmpty()) {
             return "";
         }
 
