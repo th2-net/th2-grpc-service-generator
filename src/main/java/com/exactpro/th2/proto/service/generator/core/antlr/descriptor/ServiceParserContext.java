@@ -16,13 +16,16 @@
 package com.exactpro.th2.proto.service.generator.core.antlr.descriptor;
 
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 public class ServiceParserContext {
 
+    private final Set<String> importedFiles = new HashSet<>();
     private final Map<String, String> autoReplacedProtoPackageToJavaPackage = new HashMap<>();
     private final Map<String, Map<String, String[]>> protoMessageToJavaClass = new HashMap<>();
     private final Map<String, ServiceDescriptor> services = new HashMap<>();
@@ -44,6 +47,14 @@ public class ServiceParserContext {
         var realJavaPackage = autoReplacedProtoPackageToJavaPackage.get(javaType);
         realJavaPackage = realJavaPackage == null ? javaType : realJavaPackage;
         protoMessageToJavaClass.computeIfAbsent(descriptor.getPackageName(), k -> new HashMap<>()).put(descriptor.getName(), new String[]{realJavaPackage, javaTypeName});
+    }
+
+    public void addImportedFile(String protoImport) {
+        importedFiles.add(protoImport);
+    }
+
+    public boolean isWasImported(String protoImport) {
+        return importedFiles.contains(protoImport);
     }
 
     public List<ServiceDescriptor> getServiceForGeneration(List<String> fileNames) {
@@ -72,12 +83,8 @@ public class ServiceParserContext {
     }
 
     private TypeDescriptor changeTypePackageName(TypeDescriptor type) {
-
-        if (type.getPackageName() == null || type.getPackageName().isEmpty()) {
-            return type;
-        }
-
-        var protoPackage = protoMessageToJavaClass.get(type.getPackageName());
+        var protoPackageName = type.getPackageName();
+        var protoPackage = protoMessageToJavaClass.get(protoPackageName == null || protoPackageName.isEmpty() ? null : protoPackageName);
 
         var auto = autoReplacedProtoPackageToJavaPackage.get(type.getPackageName());
         if (auto != null) {

@@ -15,10 +15,18 @@
  */
 package com.exactpro.th2.proto.service.generator.core.antlr;
 
-import com.exactpro.th2.proto.service.generator.core.antlr.descriptor.MethodDescriptor;
-import com.exactpro.th2.proto.service.generator.core.antlr.descriptor.ServiceDescriptor;
-import com.exactpro.th2.proto.service.generator.core.antlr.descriptor.ServiceParserContext;
-import com.exactpro.th2.proto.service.generator.core.antlr.descriptor.TypeDescriptor;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.net.URL;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Objects;
+import java.util.function.BiConsumer;
+import java.util.function.Consumer;
+import java.util.stream.Collectors;
 
 import org.antlr.v4.runtime.ANTLRInputStream;
 import org.antlr.v4.runtime.CommonTokenStream;
@@ -26,16 +34,10 @@ import org.antlr.v4.runtime.tree.ParseTree;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.FileInputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.net.URL;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.util.*;
-import java.util.function.BiConsumer;
-import java.util.function.Consumer;
-import java.util.stream.Collectors;
+import com.exactpro.th2.proto.service.generator.core.antlr.descriptor.MethodDescriptor;
+import com.exactpro.th2.proto.service.generator.core.antlr.descriptor.ServiceDescriptor;
+import com.exactpro.th2.proto.service.generator.core.antlr.descriptor.ServiceParserContext;
+import com.exactpro.th2.proto.service.generator.core.antlr.descriptor.TypeDescriptor;
 
 public class ProtoServiceParser {
     private static final Logger logger = LoggerFactory.getLogger(ProtoServiceParser.class);
@@ -52,7 +54,7 @@ public class ProtoServiceParser {
     private static final String GOOGLE_PROTO_JAVA_PACKAGE = "com." + GOOGLE_PROTO_PACKAGE;
 
 
-    public static List<ServiceDescriptor> getServiceDescriptors(Path protoDir) throws IOException {
+    public static List<ServiceDescriptor> getServiceDescriptors(Path protoDir, ClassLoader loader) throws IOException {
 
         var protoFiles = loadProtoFiles(protoDir);
         ServiceParserContext context = new ServiceParserContext();
@@ -63,14 +65,14 @@ public class ProtoServiceParser {
             logger.info("Parsing '{}' file", fileName);
 
             try (FileInputStream inputStream = new FileInputStream(protoFile.toFile())) {
-                parseInputStream(inputStream, fileName.toString(), context);
+                parseInputStream(inputStream, fileName.toString(), context, loader);
             }
         }
 
         return context.getServiceForGeneration(protoFiles.stream().map(it -> it.getFileName().toString()).collect(Collectors.toList()));
     }
 
-    private static void parseInputStream(InputStream inputStream, String fileName, ServiceParserContext context) throws IOException {
+    private static void parseInputStream(InputStream inputStream, String fileName, ServiceParserContext context, ClassLoader loader) throws IOException {
         Protobuf3Lexer lexer = new Protobuf3Lexer(new ANTLRInputStream(inputStream));
         Protobuf3Parser parser = new Protobuf3Parser(new CommonTokenStream(lexer));
         parser.removeErrorListeners();
@@ -85,7 +87,7 @@ public class ProtoServiceParser {
 
         for (var child : protoTree.children) {
 
-            extractImport(child, context);
+            extractImport(child, context, loader);
 
             var tmpPackageName = extractPackage(child);
             if (tmpPackageName != null) {
@@ -106,24 +108,26 @@ public class ProtoServiceParser {
             String finalJavaPackageName = javaPackageName;
             extractMessage(child, msg -> context.addType(TypeDescriptor.builder().name(msg).packageName(finalPackageName).build(), finalJavaPackageName, msg));
         }
+
+        context.addImportedFile(fileName);
     }
 
-    private static void extractImport(ParseTree child, ServiceParserContext context) {
+    private static void extractImport(ParseTree child, ServiceParserContext context, ClassLoader loader) {
         if (child.getChildCount() == 3 && child.getChild(0).getText().equals(PROTO_IMPORT_ALIAS)) {
             var resourseName = child.getChild(1).getText();
             resourseName = resourseName.substring(1, resourseName.length() - 1);
-
-            if (!extractPackageName(resourseName, '/').replace('/', '.').equals(GOOGLE_PROTO_PACKAGE)) {
+            if (!context.isWasImported(resourseName) && !extractPackageName(resourseName, '/').replace('/', '.').equals(GOOGLE_PROTO_PACKAGE)) {
                 try {
-                    URL resource = Thread.currentThread().getContextClassLoader().getResource(resourseName);
+                    URL resource = loader.getResource(resourseName);
                     if (resource != null) {
-                        String fileName = Path.of(resource.getFile()).getFileName().toString();
-                        parseInputStream(resource.openStream(), fileName, context);
+                        String fileName = Path.of(resourseName).getFileName().toString();
+                        parseInputStream(resource.openStream(), fileName, context, null);
+                        context.addImportedFile(resourseName);
                     } else {
-                        logger.warn("Can not find resource with name = {}", resourseName);
+                        logger.warn("Can not find resource in classpath with name = {}", resourseName);
                     }
                 } catch (Exception e) {
-                    logger.warn("Can not parse resource with name = {}",  resourseName);
+                    logger.warn("Can not parse resource in classpath with name = {}",  resourseName);
                 }
             }
         }

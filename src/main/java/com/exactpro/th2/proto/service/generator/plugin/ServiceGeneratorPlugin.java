@@ -15,6 +15,18 @@
  */
 package com.exactpro.th2.proto.service.generator.plugin;
 
+import java.net.MalformedURLException;
+import java.net.URL;
+import java.net.URLClassLoader;
+import java.nio.file.Path;
+import java.util.Arrays;
+import java.util.List;
+import java.util.stream.Collectors;
+
+import org.gradle.api.Plugin;
+import org.gradle.api.Project;
+import org.gradle.api.Task;
+
 import com.exactpro.th2.proto.service.generator.core.antlr.ProtoServiceParser;
 import com.exactpro.th2.proto.service.generator.core.antlr.ServiceClassGenerator;
 import com.exactpro.th2.proto.service.generator.core.antlr.descriptor.AnnotationDescriptor;
@@ -22,17 +34,12 @@ import com.exactpro.th2.proto.service.generator.core.antlr.descriptor.ServiceDes
 import com.exactpro.th2.proto.service.generator.core.antlr.descriptor.TypeDescriptor;
 import com.exactpro.th2.proto.service.generator.plugin.ext.GenServiceExt;
 import com.exactpro.th2.proto.service.generator.plugin.ext.GenServiceSettingsExt;
-import lombok.SneakyThrows;
-import org.gradle.api.Plugin;
-import org.gradle.api.Project;
-import org.gradle.api.Task;
 
-import java.nio.file.Path;
-import java.util.Arrays;
-import java.util.List;
-import java.util.stream.Collectors;
+import lombok.SneakyThrows;
 
 public class ServiceGeneratorPlugin implements Plugin<Project> {
+
+    private static final String CONFIGURATION_APP_CLASSPATH = "compileClasspath";
 
     @Override
     public void apply(Project project) {
@@ -48,6 +55,21 @@ public class ServiceGeneratorPlugin implements Plugin<Project> {
     @SneakyThrows
     private void generateService(Project project, Task task, GenServiceExt extension) {
 
+        var urls = project
+                .getConfigurations()
+                .getByName(CONFIGURATION_APP_CLASSPATH)
+                .getAllArtifacts()
+                .getFiles()
+                .getFiles()
+                .stream()
+                .map(it -> {
+                    try {
+                        return it.toURI().toURL();
+                    } catch (MalformedURLException e) {
+                        throw new IllegalStateException("Can not convert file to url = " + it.toString());
+                    }
+                }).toArray(URL[]::new);
+
         var settings = extension.getSettings();
 
         validateSettings(settings);
@@ -56,13 +78,15 @@ public class ServiceGeneratorPlugin implements Plugin<Project> {
 
         var genDir = project.file(settings.getOutDir()).toPath();
 
-        generate(protoDir, genDir);
+        ClassLoader artifactsLoader = new URLClassLoader(urls, Thread.currentThread().getContextClassLoader());
+
+        generate(protoDir, genDir, artifactsLoader);
 
     }
 
     @SneakyThrows
-    protected void generate(Path protoDir, Path genDir) {
-        var serviceDescriptors = ProtoServiceParser.getServiceDescriptors(protoDir);
+    protected void generate(Path protoDir, Path genDir, ClassLoader loader) {
+        var serviceDescriptors = ProtoServiceParser.getServiceDescriptors(protoDir, loader);
 
         addSyncStubAnnotation(serviceDescriptors);
 
