@@ -43,10 +43,10 @@ public class ServiceParserContext {
         services.put(fileName, serviceDescriptor);
     }
 
-    public void addType(TypeDescriptor descriptor, String javaType, String javaTypeName) {
-        var realJavaPackage = autoReplacedProtoPackageToJavaPackage.get(javaType);
-        realJavaPackage = realJavaPackage == null ? javaType : realJavaPackage;
-        protoMessageToJavaClass.computeIfAbsent(descriptor.getPackageName(), k -> new HashMap<>()).put(descriptor.getName(), new String[]{realJavaPackage, javaTypeName});
+    public void addType(TypeDescriptor descriptor, String javaPackage, String outerJavaClassName, String javaTypeName) {
+        var realJavaPackage = autoReplacedProtoPackageToJavaPackage.get(javaPackage);
+        realJavaPackage = realJavaPackage == null ? javaPackage : realJavaPackage;
+        protoMessageToJavaClass.computeIfAbsent(descriptor.getPackageName(), k -> new HashMap<>()).put(descriptor.getName(), outerJavaClassName == null || outerJavaClassName.isEmpty() ? new String[]{realJavaPackage, javaTypeName} : new String[]{realJavaPackage, outerJavaClassName, javaTypeName});
     }
 
     public void addImportedFile(String protoImport) {
@@ -93,7 +93,17 @@ public class ServiceParserContext {
 
         if (protoPackage != null) {
             var fullJavaName = protoPackage.get(type.getName());
-            return TypeDescriptor.builder().packageName(fullJavaName[0]).name(fullJavaName[1]).build();
+            if (fullJavaName != null) {
+                var result = TypeDescriptor.builder();
+                if (fullJavaName.length == 3) {
+                    result.packageName(fullJavaName[0] + "." + fullJavaName[1]).name(fullJavaName[2]);
+                } else {
+                    result.packageName(fullJavaName[0]).name(fullJavaName[1]);
+                }
+                return result.build();
+            } else {
+                throw new IllegalStateException("Can not find full java name for type = " + type.toString());
+            }
         } else {
             throw new IllegalStateException("Can not find java class for type = " + type.toString());
         }

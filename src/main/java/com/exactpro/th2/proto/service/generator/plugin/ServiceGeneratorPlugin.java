@@ -58,7 +58,6 @@ public class ServiceGeneratorPlugin implements Plugin<Project> {
 
     @SneakyThrows
     private void generateService(Project project, Task task, GenServiceExt extension) {
-        logger.info("Test");
 
         var urls = Arrays.asList(project
                 .getConfigurations()

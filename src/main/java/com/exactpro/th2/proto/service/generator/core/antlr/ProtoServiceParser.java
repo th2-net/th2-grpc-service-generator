@@ -28,6 +28,8 @@ import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
+import javax.annotation.Nullable;
+
 import org.antlr.v4.runtime.ANTLRInputStream;
 import org.antlr.v4.runtime.CommonTokenStream;
 import org.antlr.v4.runtime.tree.ParseTree;
@@ -47,6 +49,8 @@ public class ProtoServiceParser {
     private static final String PROTO_IMPORT_ALIAS = "import";
     private static final String PROTO_OPTION_ALIAS = "option";
     private static final String PROTO_JAVA_PACKAGE_ALIAS = "java_package";
+    private static final String PROTO_JAVA_MULTIPLE_FILES = "java_multiple_files";
+    private static final String PROTO_JAVA_OUTER_CLASSNAME = "java_outer_classname";
     private static final String PROTO_MSG_ALIAS = "message";
     private static final String PROTO_SERVICE_ALIAS = "service";
 
@@ -58,6 +62,9 @@ public class ProtoServiceParser {
 
         var protoFiles = loadProtoFiles(protoDir);
         ServiceParserContext context = new ServiceParserContext();
+        protoFiles.forEach(it -> {
+            context.addImportedFile(protoDir.relativize(it).toString());
+        });
         context.addAutoReplacedPackage(GOOGLE_PROTO_PACKAGE, GOOGLE_PROTO_JAVA_PACKAGE);
 
         for (var protoFile : protoFiles) {
@@ -65,23 +72,30 @@ public class ProtoServiceParser {
             logger.info("Parsing '{}' file", fileName);
 
             try (FileInputStream inputStream = new FileInputStream(protoFile.toFile())) {
-                parseInputStream(inputStream, fileName.toString(), context, loader);
+                parseInputStream(inputStream, fileName.toString(), context, loader, true);
             }
         }
 
         return context.getServiceForGeneration(protoFiles.stream().map(it -> it.getFileName().toString()).collect(Collectors.toList()));
     }
 
-    private static void parseInputStream(InputStream inputStream, String fileName, ServiceParserContext context, ClassLoader loader) throws IOException {
+    private static void parseInputStream(InputStream inputStream, String fileName, ServiceParserContext context, ClassLoader loader, boolean loadFromFile) throws IOException {
         Protobuf3Lexer lexer = new Protobuf3Lexer(new ANTLRInputStream(inputStream));
         Protobuf3Parser parser = new Protobuf3Parser(new CommonTokenStream(lexer));
         parser.removeErrorListeners();
         Protobuf3Parser.ProtoContext protoTree = parser.proto();
 
-        // StringBuilder for apply reference behavior
         String javaPackageName = null;
 
         String packageName = null;
+
+        boolean javaMultipleFiles = false;
+
+        String javaOuterClassName = generatedOuterClassName(fileName);
+
+        if (javaOuterClassName == null) {
+            throw new IllegalArgumentException("Wrong file name = " + fileName);
+        }
 
         List<String> comments = new ArrayList<>();
 
@@ -94,10 +108,19 @@ public class ProtoServiceParser {
                 packageName = tmpPackageName;
             }
 
-
             var tmpJavaPackageName = extractJavaPackage(child);
             if (tmpJavaPackageName != null) {
                 javaPackageName = tmpJavaPackageName;
+            }
+
+            var tmpJavaMultipleFiles = extractJavaMultipleFiles(child);
+            if (tmpJavaMultipleFiles != null) {
+                javaMultipleFiles = tmpJavaMultipleFiles;
+            }
+
+            var tmpJavaOuterClassName = extractJavaOuterClassname(child);
+            if (tmpJavaOuterClassName != null) {
+                javaOuterClassName = tmpJavaOuterClassName;
             }
 
             extractComment(child, comments);
@@ -106,10 +129,18 @@ public class ProtoServiceParser {
 
             String finalPackageName = packageName;
             String finalJavaPackageName = javaPackageName;
-            extractMessage(child, msg -> context.addType(TypeDescriptor.builder().name(msg).packageName(finalPackageName).build(), finalJavaPackageName, msg));
+            String finalJavaOuterClassName = javaOuterClassName;
+            boolean finalJavaMultipleFiles = javaMultipleFiles;
+
+            extractMessage(child, msg -> {
+                context.addType(TypeDescriptor.builder().name(msg).packageName(finalPackageName).build(), finalJavaPackageName, finalJavaMultipleFiles ? null : finalJavaOuterClassName, msg);
+                if (loadFromFile) {
+                    context.addType(TypeDescriptor.builder().name(msg).packageName(null).build(), finalJavaPackageName, finalJavaMultipleFiles ? null : finalJavaOuterClassName, msg);
+                }
+            });
         }
 
-        context.addImportedFile(fileName);
+        context.addImportedFile(packageName != null ? packageName.replace('.','/') + "/" + fileName : fileName);
     }
 
     private static void extractImport(ParseTree child, ServiceParserContext context, ClassLoader loader) {
@@ -121,7 +152,7 @@ public class ProtoServiceParser {
                     URL resource = loader.getResource(resourseName);
                     if (resource != null) {
                         String fileName = Path.of(resourseName).getFileName().toString();
-                        parseInputStream(resource.openStream(), fileName, context, null);
+                        parseInputStream(resource.openStream(), fileName, context, loader, false);
                         context.addImportedFile(resourseName);
                     } else {
                         logger.warn("Can not find resource in classpath with name = {}", resourseName);
@@ -186,6 +217,30 @@ public class ProtoServiceParser {
 
             if (option.equals(PROTO_OPTION_ALIAS) && optionName.equals(PROTO_JAVA_PACKAGE_ALIAS)) {
                 return value.replace("\"", "").replace("'", "");
+            }
+        }
+        return null;
+    }
+
+    private static Boolean extractJavaMultipleFiles(ParseTree node) {
+        String strValue = extractOption(node, PROTO_JAVA_MULTIPLE_FILES);
+        return strValue == null || strValue.isEmpty() ? null : Boolean.valueOf(strValue);
+    }
+
+    private static String extractJavaOuterClassname(ParseTree node) {
+        String strValue = extractOption(node, PROTO_JAVA_OUTER_CLASSNAME);
+        return strValue == null ? null : strValue.substring(1, strValue.length() - 1);
+    }
+
+    @Nullable
+    private static String extractOption(ParseTree node, String name) {
+        if (node.getChildCount() > 3) {
+            var optionWord = node.getChild(0).getText();
+            var optionName = node.getChild(1).getText();
+            var value = node.getChild(3).getText();
+
+            if (optionWord.equals(PROTO_OPTION_ALIAS) && optionName.equals(name)) {
+                return value;
             }
         }
         return null;
@@ -318,5 +373,35 @@ public class ProtoServiceParser {
     private static String extractPackageName(String fullName, char delimeter) {
         int endPackageIndex = fullName.lastIndexOf(delimeter);
         return endPackageIndex > 0 ? fullName.substring(0, endPackageIndex) : null;
+    }
+
+    private static String generatedOuterClassName(String fileName) {
+        if (fileName == null && fileName.isEmpty()) {
+            return null;
+        }
+
+        StringBuilder builder = new StringBuilder();
+        builder.append(fileName.charAt(0));
+
+        int lastIndex = fileName.endsWith(".proto") ? fileName.lastIndexOf('.') : fileName.length();
+
+        boolean nextCharIsUpper = true;
+        for (int i = 0; i < lastIndex; i++) {
+            char ch = fileName.charAt(i);
+
+            if (ch == '_') {
+                nextCharIsUpper = true;
+                continue;
+            }
+
+            if (nextCharIsUpper) {
+                ch = Character.toUpperCase(ch);
+                nextCharIsUpper = false;
+            }
+
+            builder.append(ch);
+        }
+
+        return builder.toString();
     }
 }
