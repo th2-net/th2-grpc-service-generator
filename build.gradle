@@ -1,5 +1,5 @@
 plugins {
-    id "com.jfrog.artifactory" version '4.15.1'
+    id "com.jfrog.bintray" version '1.8.5'
     id 'org.jetbrains.kotlin.jvm' version "1.3.72"
     id 'java-gradle-plugin'
     id 'antlr'
@@ -19,12 +19,8 @@ repositories {
     }
     mavenCentral()
     maven {
-        name 'Artifactory snapshot'
-        url 'http://artifactory5.exp.exactpro.com/artifactory/libs-snapshot'
-    }
-    maven {
-        name 'Artifactory release'
-        url 'http://artifactory5.exp.exactpro.com/artifactory/libs-release'
+        name 'Bintray'
+        url 'https://dl.bintray.com/exactpro/th2'
     }
     mavenLocal()
 
@@ -54,7 +50,7 @@ sourceSets {
 
 
 dependencies {
-    api platform('com.exactpro.th2:bom:2.0.+')
+    api platform('com.exactpro.th2:bom:2.2.+')
     implementation "io.grpc:grpc-stub"
 
     implementation 'org.slf4j:slf4j-api'
@@ -94,6 +90,17 @@ publishing {
         mavenJava(MavenPublication) {
             from components.java
         }
+        bintrayPublication(MavenPublication) {
+            from components.java
+            groupId group
+            artifactId rootProject.name
+            version project.version
+            pom.withXml {
+                def root = asNode()
+                root.appendNode('name', rootProject.name)
+                root.appendNode('url', "${vcs_url}")
+            }
+        }
     }
 
     repositories {
@@ -104,25 +111,23 @@ publishing {
     }
 }
 
-artifactory {
-    publish {
-        contextUrl = "${artifactory_url}"
-        repository {
-            repoKey = "${artifactory_deploy_repo_key}" // The Artifactory repository key to publish to
-            username = "${artifactory_user}" // The publisher user name
-            password = "${artifactory_password}" // The publisher password
-        }
-        defaults {
-            // Reference to Gradle publications defined in the build script.
-            // This is how we tell the Artifactory Plugin which artifacts should be
-            // published to Artifactory.
-            publications('mavenJava')
-            publishArtifacts = true
-            publishBuildInfo = true
-            // Properties to be attached to the published artifacts.
-            publishPom = true
+bintray {
+    user = "${bintray_user}"
+    key = "${bintray_key}"
+    publications = ['bintrayPublication']
+    pkg {
+        repo = 'th2'
+        name = rootProject.name
+        userOrg = 'exactpro'
+        licenses = ['Apache-2.0']
+        vcsUrl = "${vcs_url}"
+        version {
+            name = project.version
+            desc = project.version
+            released  = new Date()
         }
     }
+    publish = true
 }
 
 generateGrammarSource {
