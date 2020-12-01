@@ -13,12 +13,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.exactpro.th2.proto.service.generator.core.antlr.descriptor;
+package com.exactpro.th2.service.generator.service
 
-public abstract class AbstractTypeableDescriptor implements TypeableDescriptor {
+interface RetryPolicy {
 
-     public String getFullName() {
-          return getPackageName() + "." + getName();
-     }
+    fun getMaxAttempts(): Int
+
+    fun getDelay(index: Int): Long
 
 }

@@ -13,14 +13,15 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.exactpro.th2.proto.service.generator.core.antlr.descriptor;
+package com.exactpro.th2.service.generator.protoc.generator.java
 
-public interface TypeableDescriptor {
+import com.exactpro.th2.service.generator.protoc.generator.FileSpec
+import com.squareup.javapoet.JavaFile
 
-     String getName();
+data class JavaFileSpec(private val path: String, private val javaFile: JavaFile) : FileSpec {
 
-     String getPackageName();
+    override fun getFilePath(): String = path
 
-     String getFullName();
+    override fun getContent(): String = javaFile.toString()
 
 }
