@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.exactpro.th2.service.generator.service
+package com.exactpro.th2.service
 
 import com.google.protobuf.Message
 import io.grpc.stub.AbstractStub

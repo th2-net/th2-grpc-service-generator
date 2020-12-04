@@ -25,9 +25,9 @@ import java.io.InputStream
 import java.io.OutputStream
 import java.util.Properties
 
-class PluginRun(private val inputStream: InputStream, private val outputStream: OutputStream, private val generators: List<Generator>) {
+class PluginRun(private val generators: List<Generator>) {
 
-    fun generateResponse() {
+    fun generateResponse(inputStream: InputStream, outputStream: OutputStream) {
 
         val generatorRequest = try {
             inputStream.buffered().use {
@@ -46,34 +46,34 @@ class PluginRun(private val inputStream: InputStream, private val outputStream: 
             }
         }
 
-        outputStream.buffered().use {
-            val builder = PluginProtos.CodeGeneratorResponse.newBuilder()
+        val builder = PluginProtos.CodeGeneratorResponse.newBuilder()
 
-            val descriptorMap = generatorRequest.protoFileList.map { it.name to it }.toMap()
+        val descriptorMap = generatorRequest.protoFileList.map { it.name to it }.toMap()
 
-            val messageNameToPackage = HashMap<String, String>()
+        val messageNameToPackage = HashMap<String, String>()
 
-            generatorRequest.protoFileList.forEach { file ->
-                val javaPackage = file.javaPackage()
-                file.messageTypeList.forEach { message ->
-                    messageNameToPackage.put(message.name, javaPackage)
-                }
+        generatorRequest.protoFileList.forEach { file ->
+            val javaPackage = file.javaPackage()
+            file.messageTypeList.forEach { message ->
+                messageNameToPackage.put(message.name, javaPackage)
             }
-
-            generatorRequest.fileToGenerateList.map(descriptorMap::getValue).forEach { descriptor ->
-                generators.forEach {
-                    it.init(prop)
-                    it.generate(descriptor, messageNameToPackage).forEach { fileSpec ->
-                        builder.addFile(PluginProtos.CodeGeneratorResponse.File.newBuilder().also {
-                            it.name = fileSpec.getFilePath()
-                            it.content = fileSpec.getContent()
-                        })
-                    }
-                }
-            }
-
-            builder.build().writeTo(it)
         }
+
+        generatorRequest.fileToGenerateList.map(descriptorMap::getValue).forEach { descriptor ->
+            generators.forEach {
+                it.init(prop)
+                it.generate(descriptor, messageNameToPackage).forEach { fileSpec ->
+                    builder.addFile(PluginProtos.CodeGeneratorResponse.File.newBuilder().also {
+                        it.name = fileSpec.getFilePath()
+                        it.content = fileSpec.getContent()
+                    })
+                }
+            }
+        }
+
+        val buffered = outputStream.buffered()
+        builder.build().writeTo(buffered)
+        buffered.flush()
     }
 
 }

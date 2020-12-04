@@ -24,6 +24,7 @@ import io.grpc.stub.AbstractStub;
 
 @Target(ElementType.TYPE)
 @Retention(RetentionPolicy.RUNTIME)
+@Deprecated(since = "3.0.0", forRemoval = true)
 public @interface GrpcStub {
 
     Class<? extends AbstractStub> value();

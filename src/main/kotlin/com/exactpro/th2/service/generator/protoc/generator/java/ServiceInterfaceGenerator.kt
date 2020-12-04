@@ -17,8 +17,8 @@ package com.exactpro.th2.service.generator.protoc.generator.java
 
 import com.exactpro.th2.service.generator.protoc.Generator
 import com.exactpro.th2.service.generator.protoc.generator.FileSpec
-import com.exactpro.th2.service.generator.service.annotation.GrpcStub
-import com.exactpro.th2.service.generator.service.annotation.TH2Impl
+import com.exactpro.th2.service.annotation.GrpcStub
+import com.exactpro.th2.service.annotation.TH2Impl
 import com.google.protobuf.DescriptorProtos.ServiceDescriptorProto
 import com.squareup.javapoet.AnnotationSpec
 import com.squareup.javapoet.ClassName

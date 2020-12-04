@@ -32,7 +32,8 @@ object Main {
     @JvmStatic
     fun main(args: Array<String>) {
         if (args.isEmpty()) {
-            PluginRun(System.`in`, System.out, generators).generateResponse()
+            PluginRun(generators).generateResponse(System.`in`, System.out)
+            System.out.close()
         } else {
             CommandLineRun(args, generators).start()
         }

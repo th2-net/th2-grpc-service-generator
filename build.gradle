@@ -90,7 +90,7 @@ publishing {
             groupId group
             artifactId rootProject.name
             artifact("$buildDir/artifacts/${project.name}" as File) {
-                classifier "jdk11"
+                classifier "all"
                 extension "jar"
                 builtBy shadowJar
             }
@@ -164,7 +164,7 @@ shadowJar {
         )
     }
     
-    archiveName = project.name
-    destinationDir = "$buildDir/artifacts" as File
+    archiveFileName = project.name
+    destinationDirectory = "$buildDir/artifacts" as File
 }
 

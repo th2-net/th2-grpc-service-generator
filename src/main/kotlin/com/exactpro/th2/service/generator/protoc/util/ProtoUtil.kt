@@ -20,9 +20,9 @@ import com.squareup.javapoet.ClassName
 
 fun FileDescriptorProto.javaPackage() : String {
     val javaPackage = if (this.options.hasJavaPackage()) this.options.javaPackage else this.`package`
-    if (this.options.javaMultipleFiles) {
-        return javaPackage
+    return if (this.options.javaMultipleFiles) {
+        javaPackage
     } else {
-        return ClassName.get(javaPackage, if (this.options.hasJavaOuterClassname()) this.options.javaOuterClassname else this.name).toString()
+        ClassName.get(javaPackage, if (this.options.hasJavaOuterClassname()) this.options.javaOuterClassname else this.name).toString()
     }
 }
