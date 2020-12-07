@@ -33,7 +33,6 @@ object Main {
     fun main(args: Array<String>) {
         if (args.isEmpty()) {
             PluginRun(generators).generateResponse(System.`in`, System.out)
-            System.out.close()
         } else {
             CommandLineRun(args, generators).start()
         }
