@@ -13,14 +13,19 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.exactpro.th2.proto.service.generator.core.antlr.descriptor;
+package com.exactpro.th2.service.annotation;
 
-public interface TypeableDescriptor {
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
 
-     String getName();
+import io.grpc.stub.AbstractStub;
 
-     String getPackageName();
+@Target(ElementType.TYPE)
+@Retention(RetentionPolicy.RUNTIME)
+public @interface GrpcStub {
 
-     String getFullName();
+    Class<? extends AbstractStub> value();
 
 }
