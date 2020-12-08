@@ -25,7 +25,6 @@ import com.squareup.javapoet.ClassName
 import com.squareup.javapoet.CodeBlock
 import com.squareup.javapoet.TypeName
 import java.nio.file.Path
-import java.nio.file.Paths
 
 abstract class AbstractJavaServiceGenerator : Generator {
 
@@ -75,8 +74,8 @@ abstract class AbstractJavaServiceGenerator : Generator {
             }
         }.build()
 
-    protected fun createPathToJavaFile(javaPackage: String, javaClassName: String): String = Paths
-        .get(
+    protected fun createPathToJavaFile(javaPackage: String, javaClassName: String): String = Path
+        .of(
             javaPackage.replace('.', '/'),
             "$javaClassName.java")
         .toString()

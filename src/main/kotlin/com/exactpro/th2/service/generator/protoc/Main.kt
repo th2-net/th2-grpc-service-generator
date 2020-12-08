@@ -34,7 +34,7 @@ object Main {
         if (args.isEmpty()) {
             PluginRun(generators).generateResponse(System.`in`, System.out)
         } else {
-            CommandLineRun(args, generators).start()
+            CommandLineRun(generators).start(args)
         }
     }
 

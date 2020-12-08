@@ -19,7 +19,6 @@ import com.exactpro.th2.service.generator.protoc.Generator
 import com.exactpro.th2.service.generator.protoc.generator.FileSpec
 import com.google.protobuf.DescriptorProtos.FileDescriptorProto
 import java.nio.file.Path
-import java.nio.file.Paths
 import java.util.Properties
 
 class PythonServiceGenerator : Generator {
@@ -31,7 +30,7 @@ class PythonServiceGenerator : Generator {
     private var rootPath: Path? = null
 
     override fun init(prop: Properties) {
-        rootPath = prop.getProperty(ROOT_PATH_OPTION_NAME)?.let { Paths.get(it) }
+        rootPath = prop.getProperty(ROOT_PATH_OPTION_NAME)?.let { Path.of(it) }
     }
 
     override fun generate(fileDescriptor: FileDescriptorProto, messageNameToJavaPackage: Map<String, String>): List<FileSpec> {

@@ -1,2 +1,1 @@
-rootProject.name = 'service-generator-protoc'
-
+rootProject.name = 'grpc-service-generator'

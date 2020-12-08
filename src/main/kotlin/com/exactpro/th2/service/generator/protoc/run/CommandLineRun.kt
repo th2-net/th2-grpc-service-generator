@@ -22,32 +22,9 @@ import com.google.protobuf.DescriptorProtos.FileDescriptorSet
 import java.io.File
 import java.nio.charset.StandardCharsets
 import java.nio.file.Path
-import java.nio.file.Paths
 import java.util.Properties
 
-class CommandLineRun(args: Array<String>, private val generators: List<Generator>) {
-
-    private val protoDir: Path = Paths.get(args[0])
-    private val outputDir: Path = Paths.get(args[1])
-    private val prop = Properties()
-
-    init {
-        val output = outputDir.toFile()
-        if (!output.exists()) {
-            output.mkdirs()
-        }
-
-        var index = 2
-        while (index < args.size) {
-            args[index++].also {
-                val str = it.substringAfter("--")
-                val tmpIndex = str.indexOf('=')
-                if (tmpIndex > 0) {
-                    prop.setProperty(str.substring(0, tmpIndex), str.substring(tmpIndex + 1, str.length))
-                }
-            }
-        }
-    }
+class CommandLineRun(private val generators: List<Generator>) {
 
     fun parseDirectory(dirOrFile: File, files: MutableList<FileDescriptorProto>) {
         if (dirOrFile.exists()) {
@@ -63,7 +40,33 @@ class CommandLineRun(args: Array<String>, private val generators: List<Generator
         }
     }
 
-    fun start() {
+    fun start(args: Array<String>) {
+
+        if (args.size < 2) {
+            throw IllegalArgumentException("Count arguments is wrong. Minimum count is 2")
+        }
+
+
+        val protoDir: Path = Path.of(args[0])
+        val outputDir: Path = Path.of(args[1])
+        val prop = Properties()
+
+        val output = outputDir.toFile()
+        if (!output.exists()) {
+            output.mkdirs()
+        }
+
+        var index = 2
+        while (index < args.size) {
+            args[index++].also {
+                val str = it.substringAfter("--")
+                val tmpIndex = str.indexOf('=')
+                if (tmpIndex > 0) {
+                    prop.setProperty(str.substring(0, tmpIndex), str.substring(tmpIndex + 1, str.length))
+                }
+            }
+        }
+
         val map = HashMap<String, String>()
 
         val files = ArrayList<FileDescriptorProto>()

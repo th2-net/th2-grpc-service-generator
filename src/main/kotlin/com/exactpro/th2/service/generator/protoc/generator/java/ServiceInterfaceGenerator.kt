@@ -15,10 +15,10 @@
  */
 package com.exactpro.th2.service.generator.protoc.generator.java
 
-import com.exactpro.th2.service.generator.protoc.Generator
-import com.exactpro.th2.service.generator.protoc.generator.FileSpec
 import com.exactpro.th2.service.annotation.GrpcStub
 import com.exactpro.th2.service.annotation.TH2Impl
+import com.exactpro.th2.service.generator.protoc.Generator
+import com.exactpro.th2.service.generator.protoc.generator.FileSpec
 import com.google.protobuf.DescriptorProtos.ServiceDescriptorProto
 import com.squareup.javapoet.AnnotationSpec
 import com.squareup.javapoet.ClassName
@@ -29,7 +29,6 @@ import com.squareup.javapoet.TypeName
 import com.squareup.javapoet.TypeSpec
 import io.grpc.stub.StreamObserver
 import java.nio.file.Path
-import java.nio.file.Paths
 import java.util.Properties
 import javax.lang.model.element.Modifier.ABSTRACT
 import javax.lang.model.element.Modifier.PUBLIC
@@ -43,7 +42,7 @@ class ServiceInterfaceGenerator : AbstractJavaServiceGenerator(), Generator {
     private var rootPath: Path? = null
 
     override fun init(prop: Properties) {
-        rootPath = prop.getProperty(ROOT_PATH_OPTION_NAME)?.let { Paths.get(it) }
+        rootPath = prop.getProperty(ROOT_PATH_OPTION_NAME)?.let { Path.of(it) }
     }
 
     override fun generateForService(service: ServiceDescriptorProto, javaPackage: String, messageNameToJavaPackage: Map<String, String>): List<FileSpec> {
