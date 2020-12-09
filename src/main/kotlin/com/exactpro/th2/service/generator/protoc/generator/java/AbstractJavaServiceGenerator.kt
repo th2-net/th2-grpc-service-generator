@@ -20,15 +20,31 @@ import com.exactpro.th2.service.generator.protoc.generator.FileSpec
 import com.exactpro.th2.service.generator.protoc.util.javaPackage
 import com.google.protobuf.DescriptorProtos.FileDescriptorProto
 import com.google.protobuf.DescriptorProtos.ServiceDescriptorProto
-import com.squareup.javapoet.AnnotationSpec
 import com.squareup.javapoet.ClassName
-import com.squareup.javapoet.CodeBlock
 import com.squareup.javapoet.TypeName
 import java.nio.file.Path
+import java.util.Properties
 
 abstract class AbstractJavaServiceGenerator : Generator {
 
+    companion object {
+        private const val ENABLE_JAVA_GENERATION_OPTION_NAME = "enableJava"
+    }
+
+    private var enableGeneration = true
+
+    override fun init(prop: Properties) {
+        prop.getProperty(ENABLE_JAVA_GENERATION_OPTION_NAME)?.also {
+            enableGeneration = it.toBoolean()
+        }
+    }
+
     override fun generate(fileDescriptor: FileDescriptorProto, messageNameToJavaPackage: Map<String, String>): List<FileSpec> {
+
+        if (!enableGeneration) {
+            return emptyList()
+        }
+
         val javaPackage = fileDescriptor.javaPackage()
 
         return fileDescriptor.serviceList.let {
@@ -59,20 +75,6 @@ abstract class AbstractJavaServiceGenerator : Generator {
         val name = protoMessage.substringAfterLast('.');
         return ClassName.get(messageNameToJavaPackage.get(name) ?: "", name)
     }
-
-    protected fun createAnnotation(clazz: Class<*>, parameters: Map<String, String>): AnnotationSpec =
-        AnnotationSpec.builder(clazz).also {
-            parameters.forEach { parameter ->
-                it.addMember(parameter.key, CodeBlock.of(parameter.value))
-            }
-        }.build()
-
-    protected fun createAnnotation(className: ClassName, parameters: Map<String, String>): AnnotationSpec =
-        AnnotationSpec.builder(className).also {
-            parameters.forEach { parameter ->
-                it.addMember(parameter.key, CodeBlock.of(parameter.value))
-            }
-        }.build()
 
     protected fun createPathToJavaFile(javaPackage: String, javaClassName: String): String = Path
         .of(

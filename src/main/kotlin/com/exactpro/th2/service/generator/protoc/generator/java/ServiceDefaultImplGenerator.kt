@@ -45,6 +45,7 @@ class ServiceDefaultImplGenerator : AbstractJavaServiceGenerator(), Generator {
     private var rootPath: Path? = null
 
     override fun init(prop: Properties) {
+        super.init(prop)
         rootPath = prop.getProperty(ROOT_PATH_OPTION_NAME)?.let { Path.of(it) }
     }
 

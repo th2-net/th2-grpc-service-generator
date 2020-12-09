@@ -8,7 +8,10 @@ If you want to use this generator with Gradle and the protobuf plugin you should
 You can set the following options:
 1. javaInterfacesPath - the path for Java services interfaces
 1. javaInterfacesImplPath - the path for TH2 services implementations
+1. javaMetaInfPath - the path for ServiceLoader files
 1. pythonPath - the path for Python services implementations
+1. enableJava - the flag for turn on/off generation files for Java language (default: true)
+1. enablePython - the flag for turn on/off generation files for Python language (default: true)
 
 All these paths are relative to the directory in  ``generateProtoTasks.generatedFilesBaseDir`` parameter (Example: `javaInterfacesPath` = `path/to/base/dir/path/to/interfaces`)
 ```groovy
@@ -31,7 +34,10 @@ protobuf {
             generator {
                 option 'javaInterfacesPath=./path/to/interfaces'
                 option 'javaInterfacesImplPath=./path/to/th2/impl'
+                option 'javaMetaInfPath=./path/to/service/loader/files'
                 option 'pythonPath=./path/to/python'
+                option 'enableJava=true'
+                option 'enablePython=true'
             }
         }
     }

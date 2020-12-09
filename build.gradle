@@ -94,13 +94,6 @@ publishing {
                 extension "jar"
                 builtBy shadowJar
             }
-            pom.withXml {
-                // This isn't any sort of Java archive artifact, and OSSRH doesn't enforce
-                // javadoc for 'pom' packages. 'exe' would be a more appropriate packaging
-                // value, but it isn't clear how that will be interpreted. In addition,
-                // 'pom' is typically the value used when building an exe with Maven.
-                asNode().project.packaging*.value = 'pom'
-            }
         }
         
         bintrayPublication(MavenPublication) {
@@ -108,6 +101,13 @@ publishing {
             groupId group
             artifactId rootProject.name
             version project.version
+            
+            artifact("$buildDir/artifacts/${project.name}" as File) {
+                classifier "all"
+                extension "jar"
+                builtBy shadowJar
+            }
+            
             pom.withXml {
                 def root = asNode()
                 root.appendNode('name', rootProject.name)
@@ -150,7 +150,7 @@ compileKotlin {
 mainClassName = "com.exactpro.th2.service.generator.protoc.Main"
 
 shadowJar {
-    //mergeServiceFiles()
+    mergeServiceFiles()
 
     manifest {
         attributes(
