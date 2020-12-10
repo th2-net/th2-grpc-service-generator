@@ -13,15 +13,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.exactpro.th2.service.generator.protoc.generator.java
+package com.exactpro.th2.service.generator.protoc
 
-import com.exactpro.th2.service.generator.protoc.generator.FileSpec
-import com.squareup.javapoet.JavaFile
+class FileSpecImpl(private val filePath: String, private val content: String) : FileSpec {
+    override fun getFilePath(): String = filePath
 
-data class JavaFileSpec(private val path: String, private val javaFile: JavaFile) : FileSpec {
-
-    override fun getFilePath(): String = path
-
-    override fun getContent(): String = javaFile.toString()
-
+    override fun getContent(): String = content
 }

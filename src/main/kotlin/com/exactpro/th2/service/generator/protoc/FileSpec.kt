@@ -13,10 +13,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.exactpro.th2.service.generator.protoc.generator
+package com.exactpro.th2.service.generator.protoc
 
-class FileSpecImpl(private val filePath: String, private val content: String) : FileSpec {
-    override fun getFilePath(): String = filePath
+interface FileSpec {
 
-    override fun getContent(): String = content
+    fun getFilePath() : String
+
+    fun getContent() : String
+
 }

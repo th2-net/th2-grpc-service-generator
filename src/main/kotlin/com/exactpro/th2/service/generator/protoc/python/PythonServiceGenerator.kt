@@ -13,10 +13,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.exactpro.th2.service.generator.protoc.generator.python
+package com.exactpro.th2.service.generator.protoc.python
 
+import com.exactpro.th2.service.generator.protoc.FileSpec
 import com.exactpro.th2.service.generator.protoc.Generator
-import com.exactpro.th2.service.generator.protoc.generator.FileSpec
 import com.google.protobuf.DescriptorProtos.FileDescriptorProto
 import java.nio.file.Path
 import java.util.Properties
