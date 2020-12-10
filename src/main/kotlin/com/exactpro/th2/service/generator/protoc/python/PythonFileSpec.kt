@@ -13,12 +13,17 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.exactpro.th2.service.generator.protoc.generator
+package com.exactpro.th2.service.generator.protoc.python
 
-interface FileSpec {
+import com.exactpro.th2.service.generator.protoc.FileSpec
+import com.google.common.base.CaseFormat
+import com.google.common.base.CaseFormat.LOWER_UNDERSCORE
+import java.nio.file.Path
 
-    fun getFilePath() : String
+class PythonFileSpec(private val roodDir: Path?, serviceName: String, private val content: String) : FileSpec {
+    private val fileName = CaseFormat.LOWER_CAMEL.to(LOWER_UNDERSCORE, serviceName) + "_service.py"
 
-    fun getContent() : String
+    override fun getFilePath(): String = roodDir?.resolve(fileName)?.toString() ?: fileName
 
+    override fun getContent(): String = content
 }

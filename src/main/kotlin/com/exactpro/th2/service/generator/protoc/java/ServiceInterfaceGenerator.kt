@@ -13,14 +13,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.exactpro.th2.service.generator.protoc.generator.java
+package com.exactpro.th2.service.generator.protoc.java
 
-import com.exactpro.th2.service.annotation.GrpcStub
-import com.exactpro.th2.service.annotation.TH2Impl
+import com.exactpro.th2.service.generator.protoc.FileSpec
 import com.exactpro.th2.service.generator.protoc.Generator
-import com.exactpro.th2.service.generator.protoc.generator.FileSpec
 import com.google.protobuf.DescriptorProtos.ServiceDescriptorProto
-import com.squareup.javapoet.AnnotationSpec
 import com.squareup.javapoet.ClassName
 import com.squareup.javapoet.JavaFile
 import com.squareup.javapoet.MethodSpec
@@ -42,6 +39,7 @@ class ServiceInterfaceGenerator : AbstractJavaServiceGenerator(), Generator {
     private var rootPath: Path? = null
 
     override fun init(prop: Properties) {
+        super.init(prop)
         rootPath = prop.getProperty(ROOT_PATH_OPTION_NAME)?.let { Path.of(it) }
     }
 
@@ -61,7 +59,7 @@ class ServiceInterfaceGenerator : AbstractJavaServiceGenerator(), Generator {
                 .build()
         }.let {
             val name = service.name
-            createInterface(getBlockingServiceName(name), getBlockingStubClassName(javaPackage, name), getBlockingDefaultImplName(name), javaPackage, it)
+            createInterface(getBlockingServiceName(name), it)
         }.let {
             JavaFile.builder(javaPackage, it).build()
         }
@@ -79,7 +77,7 @@ class ServiceInterfaceGenerator : AbstractJavaServiceGenerator(), Generator {
                 .build()
         }.let {
             val name = service.name
-            createInterface(getAsyncServiceName(name), getAsyncStubClassName(javaPackage, name), getAsyncDefaultImplName(name), javaPackage, it)
+            createInterface(getAsyncServiceName(name), it)
         }.let {
             JavaFile.builder(javaPackage, it).build()
         }
@@ -87,18 +85,10 @@ class ServiceInterfaceGenerator : AbstractJavaServiceGenerator(), Generator {
         return JavaFileSpec(createPathToJavaFile(rootPath, javaPackage, javaFile.typeSpec.name), javaFile)
     }
 
-    private fun createGrpcStubAnnotation(javaPackage: String, stubClass: ClassName): AnnotationSpec =
-        createAnnotation(GrpcStub::class.java, mapOf("value" to "$stubClass.class"))
-
-    private fun createDefaultImplAnnotation(javaPackage: String, defaultImplJavaClassName: String) : AnnotationSpec =
-        createAnnotation(TH2Impl::class.java, mapOf("value" to ClassName.get(javaPackage, defaultImplJavaClassName).toString() + ".class"))
-
-    private fun createInterface(javaName: String, stubClass: ClassName, defaultImplJavaClassName: String, javaPackage: String, methods: List<MethodSpec>) =
+    private fun createInterface(javaName: String, methods: List<MethodSpec>) =
         TypeSpec
             .interfaceBuilder(javaName)
             .addModifiers(PUBLIC)
             .addMethods(methods)
-            .addAnnotation(createGrpcStubAnnotation(javaPackage, stubClass))
-            .addAnnotation(createDefaultImplAnnotation(javaPackage, defaultImplJavaClassName))
             .build()
 }

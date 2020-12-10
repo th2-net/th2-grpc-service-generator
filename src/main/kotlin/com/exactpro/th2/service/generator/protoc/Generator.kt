@@ -15,8 +15,6 @@
  */
 package com.exactpro.th2.service.generator.protoc
 
-import com.exactpro.th2.service.generator.protoc.generator.FileSpec
-import com.exactpro.th2.service.generator.protoc.generator.java.JavaFileSpec
 import com.google.protobuf.DescriptorProtos.FileDescriptorProto
 import java.util.Properties
 

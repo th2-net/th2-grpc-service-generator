@@ -15,9 +15,10 @@
  */
 package com.exactpro.th2.service.generator.protoc
 
-import com.exactpro.th2.service.generator.protoc.generator.java.ServiceDefaultImplGenerator
-import com.exactpro.th2.service.generator.protoc.generator.java.ServiceInterfaceGenerator
-import com.exactpro.th2.service.generator.protoc.generator.python.PythonServiceGenerator
+import com.exactpro.th2.service.generator.protoc.java.MetaInfGenerator
+import com.exactpro.th2.service.generator.protoc.java.ServiceDefaultImplGenerator
+import com.exactpro.th2.service.generator.protoc.java.ServiceInterfaceGenerator
+import com.exactpro.th2.service.generator.protoc.python.PythonServiceGenerator
 import com.exactpro.th2.service.generator.protoc.run.CommandLineRun
 import com.exactpro.th2.service.generator.protoc.run.PluginRun
 
@@ -26,7 +27,8 @@ object Main {
     private val generators: List<Generator> = listOf(
         ServiceInterfaceGenerator(),
         ServiceDefaultImplGenerator(),
-        PythonServiceGenerator()
+        PythonServiceGenerator(),
+        MetaInfGenerator()
     )
 
     @JvmStatic

@@ -13,19 +13,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.exactpro.th2.service.annotation;
+package com.exactpro.th2.service.generator.protoc
 
-import java.lang.annotation.ElementType;
-import java.lang.annotation.Retention;
-import java.lang.annotation.RetentionPolicy;
-import java.lang.annotation.Target;
+class FileSpecImpl(private val filePath: String, private val content: String) : FileSpec {
+    override fun getFilePath(): String = filePath
 
-import io.grpc.stub.AbstractStub;
-
-@Target(ElementType.TYPE)
-@Retention(RetentionPolicy.RUNTIME)
-public @interface GrpcStub {
-
-    Class<? extends AbstractStub> value();
-
+    override fun getContent(): String = content
 }

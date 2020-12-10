@@ -13,13 +13,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.exactpro.th2.service.generator.protoc.generator.java
+package com.exactpro.th2.service.generator.protoc.java
 
 import com.exactpro.th2.service.AbstractGrpcService
 import com.exactpro.th2.service.RetryPolicy
 import com.exactpro.th2.service.StubStorage
+import com.exactpro.th2.service.generator.protoc.FileSpec
 import com.exactpro.th2.service.generator.protoc.Generator
-import com.exactpro.th2.service.generator.protoc.generator.FileSpec
 import com.google.protobuf.DescriptorProtos.ServiceDescriptorProto
 import com.squareup.javapoet.ClassName
 import com.squareup.javapoet.CodeBlock
@@ -45,6 +45,7 @@ class ServiceDefaultImplGenerator : AbstractJavaServiceGenerator(), Generator {
     private var rootPath: Path? = null
 
     override fun init(prop: Properties) {
+        super.init(prop)
         rootPath = prop.getProperty(ROOT_PATH_OPTION_NAME)?.let { Path.of(it) }
     }
 

@@ -13,10 +13,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.exactpro.th2.service.generator.protoc.generator.python
+package com.exactpro.th2.service.generator.protoc.python
 
+import com.exactpro.th2.service.generator.protoc.FileSpec
 import com.exactpro.th2.service.generator.protoc.Generator
-import com.exactpro.th2.service.generator.protoc.generator.FileSpec
 import com.google.protobuf.DescriptorProtos.FileDescriptorProto
 import java.nio.file.Path
 import java.util.Properties
@@ -25,15 +25,26 @@ class PythonServiceGenerator : Generator {
 
     companion object {
         private const val ROOT_PATH_OPTION_NAME = "pythonPath"
+        private const val ENABLE_PYTHON_GENERATION_OPTION_NAME = "enablePython"
     }
+
+    private var enableGeneration = true
 
     private var rootPath: Path? = null
 
     override fun init(prop: Properties) {
         rootPath = prop.getProperty(ROOT_PATH_OPTION_NAME)?.let { Path.of(it) }
+        prop.getProperty(ENABLE_PYTHON_GENERATION_OPTION_NAME)?.also {
+            enableGeneration = it.toBoolean()
+        }
     }
 
     override fun generate(fileDescriptor: FileDescriptorProto, messageNameToJavaPackage: Map<String, String>): List<FileSpec> {
+
+        if (!enableGeneration) {
+            return emptyList()
+        }
+
         val fileName = fileDescriptor.name.replace('-', '_')
 
         return fileDescriptor.serviceList.map { service ->
