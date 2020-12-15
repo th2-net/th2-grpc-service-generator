@@ -58,13 +58,14 @@ class ServiceDefaultImplGenerator : AbstractJavaServiceGenerator(), Generator {
 
     private fun generateBlockingDefaultImpl(service: ServiceDescriptorProto, javaPackage: String, messageNameToJavaPackage: Map<String, String>): FileSpec {
         val javaFile = service.methodList.map {
-            MethodSpec.methodBuilder(it.name)
+            val methodName = it.name.decapitalize()
+            MethodSpec.methodBuilder(methodName)
                 .addModifiers(PUBLIC)
                 .returns(createType(it.outputType, messageNameToJavaPackage))
                 .addParameter(createType(it.inputType, messageNameToJavaPackage), "input")
                 .addCode("""
                     ${getBlockingStubClassName(javaPackage, service.name)} stub = getStub(input);
-                    return createBlockingRequest(() -> stub.${it.name}(input));
+                    return createBlockingRequest(() -> stub.$methodName(input));
                 """.trimIndent())
                 .build()
         }.let {
@@ -79,14 +80,15 @@ class ServiceDefaultImplGenerator : AbstractJavaServiceGenerator(), Generator {
 
     private fun generateAsyncDefaultImpl(service: ServiceDescriptorProto, javaPackage: String, messageNameToJavaPackage: Map<String, String>) : FileSpec {
         val javaFile = service.methodList.map {
-            MethodSpec.methodBuilder(it.name)
+            val methodName = it.name.decapitalize()
+            MethodSpec.methodBuilder(methodName)
                 .addModifiers(PUBLIC)
                 .returns(TypeName.VOID)
                 .addParameter(createType(it.inputType, messageNameToJavaPackage), "input")
                 .addParameter(ParameterizedTypeName.get(ClassName.get(StreamObserver::class.java), createType(it.outputType, messageNameToJavaPackage)), "observer")
                 .addCode("""
                     ${getAsyncStubClassName(javaPackage, service.name)} stub = getStub(input);
-                    createAsyncRequest(observer, (newObserver) -> stub.${it.name}(input, newObserver));
+                    createAsyncRequest(observer, (newObserver) -> stub.$methodName(input, newObserver));
                 """.trimIndent())
                 .build()
         }.let {

@@ -52,7 +52,7 @@ class ServiceInterfaceGenerator : AbstractJavaServiceGenerator(), Generator {
 
     private fun generateBlockingInterface(service: ServiceDescriptorProto, javaPackage: String, messageNameToJavaPackage: Map<String, String>) : FileSpec {
         val javaFile = service.methodList.map {
-            MethodSpec.methodBuilder(it.name)
+            MethodSpec.methodBuilder(it.name.decapitalize())
                 .addModifiers(PUBLIC, ABSTRACT)
                 .returns(createType(it.outputType, messageNameToJavaPackage))
                 .addParameter(createType(it.inputType, messageNameToJavaPackage), "input")
@@ -69,7 +69,7 @@ class ServiceInterfaceGenerator : AbstractJavaServiceGenerator(), Generator {
 
     private fun generateAsyncInterface(service: ServiceDescriptorProto, javaPackage: String, messageNameToJavaPackage: Map<String, String>) : FileSpec {
         val javaFile = service.methodList.map {
-            MethodSpec.methodBuilder(it.name)
+            MethodSpec.methodBuilder(it.name.decapitalize())
                 .addModifiers(PUBLIC, ABSTRACT)
                 .returns(TypeName.VOID)
                 .addParameter(createType(it.inputType, messageNameToJavaPackage), "input")
