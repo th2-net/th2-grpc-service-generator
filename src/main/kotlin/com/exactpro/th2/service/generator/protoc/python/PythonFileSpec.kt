@@ -20,10 +20,16 @@ import com.google.common.base.CaseFormat
 import com.google.common.base.CaseFormat.LOWER_UNDERSCORE
 import java.nio.file.Path
 
-class PythonFileSpec(private val roodDir: Path?, serviceName: String, private val content: String) : FileSpec {
-    private val fileName = CaseFormat.LOWER_CAMEL.to(LOWER_UNDERSCORE, serviceName) + "_service.py"
+class PythonFileSpec(private val roodDir: Path?, pathToFile: String?, serviceName: String, private val content: String) : FileSpec {
 
-    override fun getFilePath(): String = roodDir?.resolve(fileName)?.toString() ?: fileName
+    private val filePath: String
+
+    init {
+        val fileName = CaseFormat.LOWER_CAMEL.to(LOWER_UNDERSCORE, serviceName) + "_service.py"
+        filePath = if (pathToFile != null) Path.of(pathToFile, fileName).toString() else fileName
+    }
+
+    override fun getFilePath(): String = roodDir?.resolve(filePath)?.toString() ?: filePath
 
     override fun getContent(): String = content
 }

@@ -18,6 +18,7 @@ package com.exactpro.th2.service.generator.protoc.python
 import com.exactpro.th2.service.generator.protoc.FileSpec
 import com.exactpro.th2.service.generator.protoc.Generator
 import com.google.protobuf.DescriptorProtos.FileDescriptorProto
+import org.apache.commons.io.FilenameUtils
 import java.nio.file.Path
 import java.util.Properties
 
@@ -45,7 +46,7 @@ class PythonServiceGenerator : Generator {
             return emptyList()
         }
 
-        val fileName = fileDescriptor.name.replace('-', '_')
+        val fileName = FilenameUtils.removeExtension(fileDescriptor.name)
 
         return fileDescriptor.serviceList.map { service ->
             val builder = StringBuilder()
@@ -63,7 +64,7 @@ class PythonServiceGenerator : Generator {
                 builder.append("        return self.connector.create_request('${method.name}', request, timeout)")
             }
 
-            PythonFileSpec(rootPath, service.name, builder.toString())
+            PythonFileSpec(rootPath, FilenameUtils.getPath(fileName), service.name, builder.toString())
         }
 
     }
