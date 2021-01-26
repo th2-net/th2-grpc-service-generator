@@ -12,8 +12,8 @@ plugins {
 group = 'com.exactpro.th2'
 version = release_version
 
-sourceCompatibility = 11
-targetCompatibility = 11
+sourceCompatibility = JavaVersion.VERSION_11
+targetCompatibility = JavaVersion.VERSION_11
 
 ext {
     grpcVersion         = '1.32.1'
@@ -43,18 +43,18 @@ repositories {
 }
 
 dependencies {
-    api platform('com.exactpro.th2:bom:2.3.+')
+    api platform('com.exactpro.th2:bom:2.10.1')
 
     // Grpc and Protobuf
     implementation "com.google.protobuf:protobuf-java:${protobufVersion}"
     api "com.google.protobuf:protobuf-java-util"
     api "io.grpc:grpc-stub"
     
-    implementation "org.slf4j:slf4j-api:${slf4j_version}"
+    implementation "org.slf4j:slf4j-api"
     
     //Kotlin
-    implementation "org.jetbrains.kotlin:kotlin-stdlib:${kotlin_version}"
-    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8:${kotlin_version}"
+    implementation "org.jetbrains.kotlin:kotlin-stdlib"
+    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8"
 
     //For generation java code. License: Apache 2.0
     implementation "com.squareup:javapoet:1.13.0"
