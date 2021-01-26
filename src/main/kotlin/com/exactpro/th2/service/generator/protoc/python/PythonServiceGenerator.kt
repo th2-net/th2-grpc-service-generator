@@ -46,12 +46,12 @@ class PythonServiceGenerator : Generator {
             return emptyList()
         }
 
-        val fileName = FilenameUtils.removeExtension(fileDescriptor.name)
+        val fileName = FilenameUtils.getBaseName(FilenameUtils.removeExtension(fileDescriptor.name))
 
         return fileDescriptor.serviceList.map { service ->
             val builder = StringBuilder()
             builder.append("""
-            from . import ${fileName}_pd2_grpc as importStub
+            from . import ${fileName}_pb2_grpc as importStub
             
             class ${service.name}Service(object):
             
