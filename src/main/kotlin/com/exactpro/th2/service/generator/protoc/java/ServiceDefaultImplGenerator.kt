@@ -111,6 +111,12 @@ class ServiceDefaultImplGenerator : AbstractJavaServiceGenerator(), Generator {
             .addModifiers(PUBLIC)
             .addMethods(methods)
             .addMethod(createCreateStubMethod(javaPackage, protoName, blocking))
+            //FIXME: Added default constructor for service loader
+            .addMethod(MethodSpec.constructorBuilder().addModifiers(PUBLIC).addCode("""
+                super();
+            """.trimIndent())
+                .build()
+            )
             .addMethod(MethodSpec
                 .constructorBuilder()
                 .addModifiers(PUBLIC)

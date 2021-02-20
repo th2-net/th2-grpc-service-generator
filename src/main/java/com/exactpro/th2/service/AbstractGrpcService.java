@@ -15,22 +15,20 @@
  */
 package com.exactpro.th2.service;
 
-import java.util.Objects;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.function.Consumer;
-import java.util.function.Supplier;
-
-import org.jetbrains.annotations.NotNull;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import com.google.protobuf.Message;
-
 import io.grpc.CallOptions;
 import io.grpc.Channel;
 import io.grpc.StatusRuntimeException;
 import io.grpc.stub.AbstractStub;
 import io.grpc.stub.StreamObserver;
+import org.jetbrains.annotations.NotNull;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.util.Objects;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Consumer;
+import java.util.function.Supplier;
 
 public abstract class AbstractGrpcService<S extends AbstractStub<S>> {
 
@@ -38,12 +36,21 @@ public abstract class AbstractGrpcService<S extends AbstractStub<S>> {
     private final RetryPolicy retryPolicy;
     private final StubStorage<S> stubStorage;
 
+    public AbstractGrpcService() {
+        retryPolicy = null;
+        stubStorage = null;
+    }
+
     public AbstractGrpcService(@NotNull RetryPolicy retryPolicy, @NotNull StubStorage<S> stubStorage) {
         this.retryPolicy = Objects.requireNonNull(retryPolicy, "Retry policy can not be null");
         this.stubStorage = Objects.requireNonNull(stubStorage, "Service configuration can not be null");
     }
 
     protected <T> T createBlockingRequest(Supplier<T> method) {
+
+        if (retryPolicy == null || stubStorage == null) {
+            throw new IllegalStateException("Not yet init");
+        }
 
         RuntimeException exception = new RuntimeException("Can not execute GRPC blocking request");
 
@@ -70,6 +77,10 @@ public abstract class AbstractGrpcService<S extends AbstractStub<S>> {
     }
 
     protected <T> void createAsyncRequest(StreamObserver<T> observer,  Consumer<StreamObserver<T>> method) {
+        if (retryPolicy == null || stubStorage == null) {
+            throw new IllegalStateException("Not yet init");
+        }
+
         method.accept(new RetryStreamObserver<>(observer, method));
     }
 
