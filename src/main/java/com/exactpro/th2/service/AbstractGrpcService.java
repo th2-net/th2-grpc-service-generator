@@ -78,7 +78,7 @@ public abstract class AbstractGrpcService<S extends AbstractStub<S>> {
 
     protected <T> void createAsyncRequest(StreamObserver<T> observer,  Consumer<StreamObserver<T>> method) {
         if (retryPolicy == null || stubStorage == null) {
-            throw new IllegalStateException("Not already init");
+            throw new IllegalStateException("Not yet init");
         }
 
         method.accept(new RetryStreamObserver<>(observer, method));
