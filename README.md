@@ -58,3 +58,9 @@ protobuf {
     }
 }
 ```
+
+## Release notes
+
+### 3.1.7
+
+* Removed the dependency to Bintray repository
