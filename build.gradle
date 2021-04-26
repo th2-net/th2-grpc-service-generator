@@ -27,10 +27,6 @@ ext {
 repositories {
     mavenCentral()
     maven {
-        name 'Bintray'
-        url 'https://dl.bintray.com/exactpro/th2'
-    }
-    maven {
             name 'Sonatype_snapshots'
             url 'https://s01.oss.sonatype.org/content/repositories/snapshots/'
     }
@@ -46,7 +42,7 @@ repositories {
 }
 
 dependencies {
-    api platform('com.exactpro.th2:bom:2.10.1')
+    api platform('com.exactpro.th2:bom:2.10.2')
 
     // Grpc and Protobuf
     implementation "com.google.protobuf:protobuf-java:${protobufVersion}"
