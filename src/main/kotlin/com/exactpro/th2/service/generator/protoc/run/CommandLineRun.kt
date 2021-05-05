@@ -16,6 +16,7 @@
 package com.exactpro.th2.service.generator.protoc.run
 
 import com.exactpro.th2.service.generator.protoc.Generator
+import com.exactpro.th2.service.generator.protoc.util.fullNameFor
 import com.exactpro.th2.service.generator.protoc.util.javaPackage
 import com.google.protobuf.DescriptorProtos.FileDescriptorProto
 import com.google.protobuf.DescriptorProtos.FileDescriptorSet
@@ -73,10 +74,11 @@ class CommandLineRun(private val generators: List<Generator>) {
 
         parseDirectory(protoDir.toFile(), files)
 
-        files.forEach {
-            val javaPackage = it.javaPackage()
-            it.messageTypeList.forEach {
-                map.put(it.name, javaPackage)
+        files.forEach { file ->
+            val javaPackage = file.javaPackage()
+            file.messageTypeList.forEach { msg ->
+                val fullMessageName = file.fullNameFor(msg)
+                map[fullMessageName] = javaPackage
             }
         }
 

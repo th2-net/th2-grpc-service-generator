@@ -16,6 +16,7 @@
 package com.exactpro.th2.service.generator.protoc.run
 
 import com.exactpro.th2.service.generator.protoc.Generator
+import com.exactpro.th2.service.generator.protoc.util.fullNameFor
 import com.exactpro.th2.service.generator.protoc.util.javaPackage
 import com.google.protobuf.compiler.PluginProtos
 import java.io.IOException
@@ -53,7 +54,8 @@ class PluginRun(private val generators: List<Generator>) {
         generatorRequest.protoFileList.forEach { file ->
             val javaPackage = file.javaPackage()
             file.messageTypeList.forEach { message ->
-                messageNameToPackage.put(message.name, javaPackage)
+                val fullMessageName = file.fullNameFor(message)
+                messageNameToPackage[fullMessageName] = javaPackage
             }
         }
 
