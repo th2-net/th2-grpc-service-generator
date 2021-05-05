@@ -61,7 +61,7 @@ protobuf {
 
 ## Release notes
 
-### 3.1.9
+### 3.1.10
 
 * Fix bug with using incorrect message if message with same name exist in different proto package;
 

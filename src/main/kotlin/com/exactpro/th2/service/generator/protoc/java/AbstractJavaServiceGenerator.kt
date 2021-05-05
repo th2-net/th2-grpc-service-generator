@@ -22,6 +22,7 @@ import com.google.protobuf.DescriptorProtos.FileDescriptorProto
 import com.google.protobuf.DescriptorProtos.ServiceDescriptorProto
 import com.squareup.javapoet.ClassName
 import com.squareup.javapoet.TypeName
+import java.io.FileOutputStream
 import java.nio.file.Path
 import java.util.Properties
 
@@ -71,9 +72,13 @@ abstract class AbstractJavaServiceGenerator : Generator {
 
     protected fun getAsyncStubClassName(javaPackage: String, protoName: String): ClassName = ClassName.get(javaPackage, "${protoName}Grpc", "${protoName}Stub")
 
+    /**
+     * The [protoMessage] has the following format: `.package.message_name`
+     */
     protected fun createType(protoMessage: String, messageNameToJavaPackage: Map<String, String>): TypeName {
-        val name = protoMessage.substringAfterLast('.');
-        return ClassName.get(messageNameToJavaPackage.getOrDefault(protoMessage, ""), name)
+        val name = protoMessage.substringAfterLast('.')
+        val fullName = protoMessage.trimStart('.')
+        return ClassName.get(messageNameToJavaPackage.getOrDefault(fullName, ""), name)
     }
 
     protected fun createPathToJavaFile(javaPackage: String, javaClassName: String): String = Path
