@@ -51,15 +51,19 @@ First argument should be directory or file with ``FileDescriptorSet``. Second ar
 ``FileDescriptorSet`` is a special protobuf's object which describe describes proto files. You can generate it with Gradle's protobuf plugin
 ```groovy
 protobuf {
-    ...
+    //...
     generateProtoTasks {
-        ...
+        //...
         all()*.generateDescriptorSet = true
     }
 }
 ```
 
 ## Release notes
+
+### 3.1.9
+
+* Fix bug with using incorrect message if message with same name exist in different proto package;
 
 ### 3.1.7
 
