@@ -22,7 +22,6 @@ import com.google.protobuf.DescriptorProtos.FileDescriptorProto
 import com.google.protobuf.DescriptorProtos.ServiceDescriptorProto
 import com.squareup.javapoet.ClassName
 import com.squareup.javapoet.TypeName
-import java.io.FileOutputStream
 import java.nio.file.Path
 import java.util.Properties
 
