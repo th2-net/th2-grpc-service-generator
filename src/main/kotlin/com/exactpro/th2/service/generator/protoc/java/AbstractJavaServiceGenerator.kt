@@ -73,7 +73,7 @@ abstract class AbstractJavaServiceGenerator : Generator {
 
     protected fun createType(protoMessage: String, messageNameToJavaPackage: Map<String, String>): TypeName {
         val name = protoMessage.substringAfterLast('.');
-        return ClassName.get(messageNameToJavaPackage.get(name) ?: "", name)
+        return ClassName.get(messageNameToJavaPackage.getOrDefault(protoMessage, ""), name)
     }
 
     protected fun createPathToJavaFile(javaPackage: String, javaClassName: String): String = Path

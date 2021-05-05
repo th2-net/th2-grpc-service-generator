@@ -15,6 +15,7 @@
  */
 package com.exactpro.th2.service.generator.protoc.util
 
+import com.google.protobuf.DescriptorProtos
 import com.google.protobuf.DescriptorProtos.FileDescriptorProto
 import com.squareup.javapoet.ClassName
 
@@ -25,4 +26,14 @@ fun FileDescriptorProto.javaPackage() : String {
     } else {
         ClassName.get(javaPackage, if (this.options.hasJavaOuterClassname()) this.options.javaOuterClassname else this.name).toString()
     }
+}
+
+/**
+ * Returns the full message name in format:
+ *
+ * + `package.msg_name` - if the file has package
+ * + `msg_name` - if the file does not have package
+ */
+fun FileDescriptorProto.fullNameFor(message: DescriptorProtos.DescriptorProto): String {
+    return (if (hasPackage()) "${`package`}." else "") + message.name
 }
