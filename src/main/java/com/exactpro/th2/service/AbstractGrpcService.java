@@ -18,6 +18,8 @@ package com.exactpro.th2.service;
 import com.google.protobuf.Message;
 import io.grpc.CallOptions;
 import io.grpc.Channel;
+import io.grpc.Status;
+import io.grpc.StatusException;
 import io.grpc.StatusRuntimeException;
 import io.grpc.stub.AbstractStub;
 import io.grpc.stub.StreamObserver;
@@ -59,6 +61,9 @@ public abstract class AbstractGrpcService<S extends AbstractStub<S>> {
                 return method.get();
             } catch (StatusRuntimeException e) {
                 exception.addSuppressed(e);
+                if (e.getStatus() == Status.UNKNOWN) { // Server side thrown exception
+                    throw exception;
+                }
                 logger.warn("Can not send GRPC blocking request. Retrying. Current attempt = {}", i + 1, e);
             } catch (Exception e) {
                 exception.addSuppressed(e);

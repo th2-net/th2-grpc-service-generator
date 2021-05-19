@@ -61,6 +61,10 @@ protobuf {
 
 ## Release notes
 
+### 3.1.11
+
+* Fix problem with retry grpc call when a server-side thrown exception
+
 ### 3.1.10
 
 * Fix bug with using incorrect message if message with same name exist in different proto package;
