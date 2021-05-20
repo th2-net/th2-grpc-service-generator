@@ -18,9 +18,12 @@ package com.exactpro.th2.service.generator.protoc.java
 import com.exactpro.th2.service.generator.protoc.FileSpec
 import com.exactpro.th2.service.generator.protoc.Generator
 import com.exactpro.th2.service.generator.protoc.util.javaPackage
+import com.google.protobuf.DescriptorProtos
 import com.google.protobuf.DescriptorProtos.FileDescriptorProto
 import com.google.protobuf.DescriptorProtos.ServiceDescriptorProto
+import com.google.protobuf.Type
 import com.squareup.javapoet.ClassName
+import com.squareup.javapoet.ParameterizedTypeName
 import com.squareup.javapoet.TypeName
 import java.nio.file.Path
 import java.util.Properties
@@ -39,7 +42,10 @@ abstract class AbstractJavaServiceGenerator : Generator {
         }
     }
 
-    override fun generate(fileDescriptor: FileDescriptorProto, messageNameToJavaPackage: Map<String, String>): List<FileSpec> {
+    override fun generate(
+        fileDescriptor: FileDescriptorProto,
+        messageNameToJavaPackage: Map<String, String>
+    ): List<FileSpec> {
 
         if (!enableGeneration) {
             return emptyList()
@@ -54,9 +60,11 @@ abstract class AbstractJavaServiceGenerator : Generator {
         }
     }
 
-    protected abstract fun generateForService(serviceDescriptorProto: ServiceDescriptorProto,
-                                              javaPackage: String,
-                                              messageNameToJavaPackage: Map<String, String>): List<FileSpec>
+    protected abstract fun generateForService(
+        serviceDescriptorProto: ServiceDescriptorProto,
+        javaPackage: String,
+        messageNameToJavaPackage: Map<String, String>
+    ): List<FileSpec>
 
 
     protected fun getBlockingServiceName(protoName: String): String = "${protoName}Service"
@@ -67,9 +75,11 @@ abstract class AbstractJavaServiceGenerator : Generator {
 
     protected fun getAsyncDefaultImplName(protoName: String): String = "${protoName}DefaultAsyncImpl"
 
-    protected fun getBlockingStubClassName(javaPackage: String, protoName: String): ClassName = ClassName.get(javaPackage, "${protoName}Grpc", "${protoName}BlockingStub")
+    protected fun getBlockingStubClassName(javaPackage: String, protoName: String): ClassName =
+        ClassName.get(javaPackage, "${protoName}Grpc", "${protoName}BlockingStub")
 
-    protected fun getAsyncStubClassName(javaPackage: String, protoName: String): ClassName = ClassName.get(javaPackage, "${protoName}Grpc", "${protoName}Stub")
+    protected fun getAsyncStubClassName(javaPackage: String, protoName: String): ClassName =
+        ClassName.get(javaPackage, "${protoName}Grpc", "${protoName}Stub")
 
     /**
      * The [protoMessage] has the following format: `.package.message_name`
@@ -80,16 +90,28 @@ abstract class AbstractJavaServiceGenerator : Generator {
         return ClassName.get(messageNameToJavaPackage.getOrDefault(fullName, ""), name)
     }
 
+    protected fun wrapStreaming(
+        type: TypeName,
+        methodDescriptorProto: DescriptorProtos.MethodDescriptorProto
+    ): TypeName {
+        return if (methodDescriptorProto.serverStreaming) {
+            ParameterizedTypeName.get(ClassName.get(Iterator::class.java), type)
+        } else {
+            type
+        }
+    }
+
     protected fun createPathToJavaFile(javaPackage: String, javaClassName: String): String = Path
-        .of(
-            javaPackage.replace('.', '/'),
-            "$javaClassName.java")
-        .toString()
+            .of(
+                javaPackage.replace('.', '/'),
+                "$javaClassName.java"
+            )
+            .toString()
 
     protected fun createPathToJavaFile(rootDir: Path?, javaPackage: String, javaClassName: String): String = rootDir
-        ?.resolve(javaPackage.replace('.', '/'))
-        ?.resolve("$javaClassName.java")
-        ?.toString()
+            ?.resolve(javaPackage.replace('.', '/'))
+            ?.resolve("$javaClassName.java")
+            ?.toString()
         ?: createPathToJavaFile(javaPackage, javaClassName)
 
 }
