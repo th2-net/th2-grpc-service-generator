@@ -67,7 +67,7 @@ protobuf {
 
 ### 3.1.10
 
-* Fix bug with using incorrect message if message with same name exist in different proto package;
+* Fix a bug which uses an incorrect message, if a message with the same name exists in a different proto package;
 
 ### 3.1.7
 
