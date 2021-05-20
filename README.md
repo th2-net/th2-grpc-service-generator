@@ -63,7 +63,7 @@ protobuf {
 
 ### 3.1.11
 
-* Fix problem with retry grpc call when a server-side thrown exception
+* Fix a problem with retry grpc call when a server-side thrown an exception
 
 ### 3.1.10
 
