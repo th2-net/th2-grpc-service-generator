@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2020 Exactpro (Exactpro Systems Limited)
+ * Copyright 2020-2021 Exactpro (Exactpro Systems Limited)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,6 +18,7 @@ package com.exactpro.th2.service;
 import com.google.protobuf.Message;
 import io.grpc.CallOptions;
 import io.grpc.Channel;
+import io.grpc.Status;
 import io.grpc.StatusRuntimeException;
 import io.grpc.stub.AbstractStub;
 import io.grpc.stub.StreamObserver;
@@ -59,6 +60,9 @@ public abstract class AbstractGrpcService<S extends AbstractStub<S>> {
                 return method.get();
             } catch (StatusRuntimeException e) {
                 exception.addSuppressed(e);
+                if (e.getStatus() == Status.UNKNOWN) { // Server side thrown an exception
+                    throw exception;
+                }
                 logger.warn("Can not send GRPC blocking request. Retrying. Current attempt = {}", i + 1, e);
             } catch (Exception e) {
                 exception.addSuppressed(e);
@@ -111,14 +115,18 @@ public abstract class AbstractGrpcService<S extends AbstractStub<S>> {
             int attempt = currentAttempt.getAndIncrement();
             if (attempt < retryPolicy.getMaxAttempts() && t instanceof StatusRuntimeException) {
 
-                logger.warn("Can not send GRPC async request. Retrying. Current attempt = {}", currentAttempt.get() + 1, t);
-
-                try {
-                    Thread.sleep(retryPolicy.getDelay(attempt));
-
-                    method.accept(this);
-                } catch (InterruptedException e) {
+                if (((StatusRuntimeException)t).getStatus() == Status.UNKNOWN) { // Server side thrown an exception
                     delegate.onError(t);
+                } else {
+                    logger.warn("Can not send GRPC async request. Retrying. Current attempt = {}", currentAttempt.get() + 1, t);
+
+                    try {
+                        Thread.sleep(retryPolicy.getDelay(attempt));
+
+                        method.accept(this);
+                    } catch (InterruptedException e) {
+                        delegate.onError(t);
+                    }
                 }
             } else {
                 delegate.onError(t);
