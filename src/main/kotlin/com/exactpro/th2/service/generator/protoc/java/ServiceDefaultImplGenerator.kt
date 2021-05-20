@@ -61,7 +61,7 @@ class ServiceDefaultImplGenerator : AbstractJavaServiceGenerator(), Generator {
             val methodName = it.name.decapitalize()
             MethodSpec.methodBuilder(methodName)
                 .addModifiers(PUBLIC)
-                .returns(createType(it.outputType, messageNameToJavaPackage))
+                .returns(wrapStreaming(createType(it.outputType, messageNameToJavaPackage), it))
                 .addParameter(createType(it.inputType, messageNameToJavaPackage), "input")
                 .addCode("""
                     ${getBlockingStubClassName(javaPackage, service.name)} stub = getStub(input);

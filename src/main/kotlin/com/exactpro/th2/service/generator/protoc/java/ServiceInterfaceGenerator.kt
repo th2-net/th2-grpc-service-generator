@@ -54,7 +54,7 @@ class ServiceInterfaceGenerator : AbstractJavaServiceGenerator(), Generator {
         val javaFile = service.methodList.map {
             MethodSpec.methodBuilder(it.name.decapitalize())
                 .addModifiers(PUBLIC, ABSTRACT)
-                .returns(createType(it.outputType, messageNameToJavaPackage))
+                .returns(wrapStreaming(createType(it.outputType, messageNameToJavaPackage), it))
                 .addParameter(createType(it.inputType, messageNameToJavaPackage), "input")
                 .build()
         }.let {
