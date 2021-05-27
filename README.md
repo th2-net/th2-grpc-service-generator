@@ -61,6 +61,10 @@ protobuf {
 
 ## Release notes
 
+### 3.1.12
+
+* Fix a problem with code generation for the protobuf `stream` modifier in returns.
+
 ### 3.1.11
 
 * Fix a problem with retry grpc call when a server-side thrown an exception
