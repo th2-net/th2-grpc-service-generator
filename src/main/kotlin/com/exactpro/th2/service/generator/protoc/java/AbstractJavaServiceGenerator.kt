@@ -18,9 +18,11 @@ package com.exactpro.th2.service.generator.protoc.java
 import com.exactpro.th2.service.generator.protoc.FileSpec
 import com.exactpro.th2.service.generator.protoc.Generator
 import com.exactpro.th2.service.generator.protoc.util.javaPackage
+import com.google.protobuf.DescriptorProtos
 import com.google.protobuf.DescriptorProtos.FileDescriptorProto
 import com.google.protobuf.DescriptorProtos.ServiceDescriptorProto
 import com.squareup.javapoet.ClassName
+import com.squareup.javapoet.ParameterizedTypeName
 import com.squareup.javapoet.TypeName
 import java.nio.file.Path
 import java.util.Properties
@@ -78,6 +80,14 @@ abstract class AbstractJavaServiceGenerator : Generator {
         val name = protoMessage.substringAfterLast('.')
         val fullName = protoMessage.trimStart('.')
         return ClassName.get(messageNameToJavaPackage.getOrDefault(fullName, ""), name)
+    }
+
+    protected fun wrapStreaming(type: TypeName, methodDescriptorProto: DescriptorProtos.MethodDescriptorProto): TypeName {
+        return if (methodDescriptorProto.serverStreaming) {
+            ParameterizedTypeName.get(ClassName.get(Iterator::class.java), type)
+        } else {
+            type
+        }
     }
 
     protected fun createPathToJavaFile(javaPackage: String, javaClassName: String): String = Path
