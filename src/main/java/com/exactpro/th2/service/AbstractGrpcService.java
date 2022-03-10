@@ -36,15 +36,22 @@ public abstract class AbstractGrpcService<S extends AbstractStub<S>> {
     private static final Logger logger = LoggerFactory.getLogger(AbstractGrpcService.class);
     private final RetryPolicy retryPolicy;
     private final StubStorage<S> stubStorage;
+    private final String[] attrs;
 
     public AbstractGrpcService() {
         retryPolicy = null;
         stubStorage = null;
+        attrs = new String[0];
     }
 
     public AbstractGrpcService(@NotNull RetryPolicy retryPolicy, @NotNull StubStorage<S> stubStorage) {
+        this(retryPolicy, stubStorage, new String[0]);
+    }
+
+    public AbstractGrpcService(@NotNull RetryPolicy retryPolicy, @NotNull StubStorage<S> stubStorage, String... attrs) {
         this.retryPolicy = Objects.requireNonNull(retryPolicy, "Retry policy can not be null");
         this.stubStorage = Objects.requireNonNull(stubStorage, "Service configuration can not be null");
+        this.attrs = attrs;
     }
 
     protected <T> T createBlockingRequest(Supplier<T> method) {
@@ -91,7 +98,7 @@ public abstract class AbstractGrpcService<S extends AbstractStub<S>> {
     protected abstract S createStub(Channel channel, CallOptions callOptions);
 
     protected S getStub(Message message) {
-        return stubStorage.getStub(message, this::createStub);
+        return stubStorage.getStub(message, this::createStub, attrs);
     }
 
     private class RetryStreamObserver<T> implements StreamObserver<T> {

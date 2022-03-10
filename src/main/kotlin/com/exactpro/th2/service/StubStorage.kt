@@ -21,6 +21,6 @@ import io.grpc.stub.AbstractStub.StubFactory
 
 interface StubStorage<T : AbstractStub<T>> {
 
-    fun getStub(message: Message, stubFactory: StubFactory<T>) : T
+    fun getStub(message: Message, stubFactory: StubFactory<T>, vararg attrs: String) : T
 
 }
