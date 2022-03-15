@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2020 Exactpro (Exactpro Systems Limited)
+ * Copyright 2020-2022 Exactpro (Exactpro Systems Limited)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,6 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package com.exactpro.th2.service.generator.protoc.java
 
 import com.exactpro.th2.service.generator.protoc.FileSpec
@@ -56,10 +57,10 @@ class ServiceInterfaceGenerator : AbstractJavaServiceGenerator(), Generator {
                 .addModifiers(PUBLIC, ABSTRACT)
                 .returns(wrapStreaming(createType(it.outputType, messageNameToJavaPackage), it))
                 .addParameter(createType(it.inputType, messageNameToJavaPackage), "input")
+                .addParameter(ParameterizedTypeName.get(ClassName.get(Map::class.java), ClassName.get(String::class.java), ClassName.get(String::class.java)), "properties")
                 .build()
         }.let {
-            val name = service.name
-            createInterface(getBlockingServiceName(name), it)
+            createInterface(getBlockingServiceName(service.name), it)
         }.let {
             JavaFile.builder(javaPackage, it).build()
         }
@@ -73,11 +74,11 @@ class ServiceInterfaceGenerator : AbstractJavaServiceGenerator(), Generator {
                 .addModifiers(PUBLIC, ABSTRACT)
                 .returns(TypeName.VOID)
                 .addParameter(createType(it.inputType, messageNameToJavaPackage), "input")
+                .addParameter(ParameterizedTypeName.get(ClassName.get(Map::class.java), ClassName.get(String::class.java), ClassName.get(String::class.java)), "properties")
                 .addParameter(ParameterizedTypeName.get(ClassName.get(StreamObserver::class.java), createType(it.outputType, messageNameToJavaPackage)), "observer")
                 .build()
         }.let {
-            val name = service.name
-            createInterface(getAsyncServiceName(name), it)
+            createInterface(getAsyncServiceName(service.name), it)
         }.let {
             JavaFile.builder(javaPackage, it).build()
         }

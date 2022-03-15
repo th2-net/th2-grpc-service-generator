@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2020 Exactpro (Exactpro Systems Limited)
+ * Copyright 2020-2022 Exactpro (Exactpro Systems Limited)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,6 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package com.exactpro.th2.service.generator.protoc.java
 
 import com.exactpro.th2.service.AbstractGrpcService
@@ -63,8 +64,9 @@ class ServiceDefaultImplGenerator : AbstractJavaServiceGenerator(), Generator {
                 .addModifiers(PUBLIC)
                 .returns(wrapStreaming(createType(it.outputType, messageNameToJavaPackage), it))
                 .addParameter(createType(it.inputType, messageNameToJavaPackage), "input")
+                .addParameter(ParameterizedTypeName.get(ClassName.get(Map::class.java), ClassName.get(String::class.java), ClassName.get(String::class.java)), "properties")
                 .addCode("""
-                    ${getBlockingStubClassName(javaPackage, service.name)} stub = getStub(input);
+                    ${getBlockingStubClassName(javaPackage, service.name)} stub = getStub(input, properties);
                     return createBlockingRequest(() -> stub.$methodName(input));
                 """.trimIndent())
                 .build()
@@ -85,9 +87,10 @@ class ServiceDefaultImplGenerator : AbstractJavaServiceGenerator(), Generator {
                 .addModifiers(PUBLIC)
                 .returns(TypeName.VOID)
                 .addParameter(createType(it.inputType, messageNameToJavaPackage), "input")
+                .addParameter(ParameterizedTypeName.get(ClassName.get(Map::class.java), ClassName.get(String::class.java), ClassName.get(String::class.java)), "properties")
                 .addParameter(ParameterizedTypeName.get(ClassName.get(StreamObserver::class.java), createType(it.outputType, messageNameToJavaPackage)), "observer")
                 .addCode("""
-                    ${getAsyncStubClassName(javaPackage, service.name)} stub = getStub(input);
+                    ${getAsyncStubClassName(javaPackage, service.name)} stub = getStub(input, properties);
                     createAsyncRequest(observer, (newObserver) -> stub.$methodName(input, newObserver));
                 """.trimIndent())
                 .build()
