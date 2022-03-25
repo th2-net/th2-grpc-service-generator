@@ -61,6 +61,10 @@ protobuf {
 
 ## Release notes
 
+### 3.2.0
+
+* gRPC pins filters support
+
 ### 3.1.12
 
 * Fix a problem with code generation for the protobuf `stream` modifier in returns.
