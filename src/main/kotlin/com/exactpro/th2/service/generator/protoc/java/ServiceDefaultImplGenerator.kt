@@ -96,7 +96,8 @@ class ServiceDefaultImplGenerator : AbstractJavaServiceGenerator(), Generator {
                     }
                 )
             } else {
-                addCode("return $methodName(input, java.util.Collections.EMPTY_MAP${if (async) ", observer" else ""});")
+                if (!async) addCode("return ")
+                addCode("$methodName(input, java.util.Collections.EMPTY_MAP${if (async) ", observer" else ""});")
             }
             build()
         }
