@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2020 Exactpro (Exactpro Systems Limited)
+ * Copyright 2020-2022 Exactpro (Exactpro Systems Limited)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,10 +13,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package com.exactpro.th2.service.generator.protoc.java
 
 import com.exactpro.th2.service.generator.protoc.FileSpec
 import com.exactpro.th2.service.generator.protoc.Generator
+import com.google.protobuf.DescriptorProtos
 import com.google.protobuf.DescriptorProtos.ServiceDescriptorProto
 import com.squareup.javapoet.ClassName
 import com.squareup.javapoet.JavaFile
@@ -45,50 +47,54 @@ class ServiceInterfaceGenerator : AbstractJavaServiceGenerator(), Generator {
 
     override fun generateForService(service: ServiceDescriptorProto, javaPackage: String, messageNameToJavaPackage: Map<String, String>): List<FileSpec> {
         return listOf(
-            generateBlockingInterface(service, javaPackage, messageNameToJavaPackage),
-            generateAsyncInterface(service, javaPackage, messageNameToJavaPackage)
+            generateInterface(service, false, javaPackage, messageNameToJavaPackage),
+            generateInterface(service, true, javaPackage, messageNameToJavaPackage)
         )
     }
 
-    private fun generateBlockingInterface(service: ServiceDescriptorProto, javaPackage: String, messageNameToJavaPackage: Map<String, String>) : FileSpec {
-        val javaFile = service.methodList.map {
-            MethodSpec.methodBuilder(it.name.decapitalize())
-                .addModifiers(PUBLIC, ABSTRACT)
-                .returns(wrapStreaming(createType(it.outputType, messageNameToJavaPackage), it))
-                .addParameter(createType(it.inputType, messageNameToJavaPackage), "input")
-                .build()
+    private fun generateMethod(
+        method: DescriptorProtos.MethodDescriptorProto,
+        messageNameToJavaPackage: Map<String, String>,
+        async: Boolean,
+        withFilter: Boolean
+    ): MethodSpec {
+        return with(MethodSpec.methodBuilder(method.name.decapitalize()).addModifiers(PUBLIC, ABSTRACT)) {
+            returns(if (async) {
+                TypeName.VOID
+            } else {
+                wrapStreaming(createType(method.outputType, messageNameToJavaPackage), method)
+            })
+
+            addParameter(createType(method.inputType, messageNameToJavaPackage), "input")
+
+            if (withFilter) {
+                addParameter(ParameterizedTypeName.get(ClassName.get(Map::class.java), ClassName.get(String::class.java), ClassName.get(String::class.java)), "properties")
+            }
+
+            if (async) {
+                addParameter(ParameterizedTypeName.get(ClassName.get(StreamObserver::class.java), createType(method.outputType, messageNameToJavaPackage)), "observer")
+            }
+
+            build()
+        }
+    }
+
+    private fun generateInterface(service: ServiceDescriptorProto, async: Boolean, javaPackage: String, messageNameToJavaPackage: Map<String, String>) : FileSpec {
+        val javaFile = service.methodList.flatMap {
+            listOf(
+                generateMethod(it, messageNameToJavaPackage, async, withFilter = false),
+                generateMethod(it, messageNameToJavaPackage, async, withFilter = true)
+            )
         }.let {
-            val name = service.name
-            createInterface(getBlockingServiceName(name), it)
+            val javaName = (if (async) ::getAsyncServiceName else ::getBlockingServiceName)(service.name)
+            TypeSpec.interfaceBuilder(javaName)
+                .addModifiers(PUBLIC)
+                .addMethods(it)
+                .build()
         }.let {
             JavaFile.builder(javaPackage, it).build()
         }
 
         return JavaFileSpec(createPathToJavaFile(rootPath, javaPackage, javaFile.typeSpec.name), javaFile)
     }
-
-    private fun generateAsyncInterface(service: ServiceDescriptorProto, javaPackage: String, messageNameToJavaPackage: Map<String, String>) : FileSpec {
-        val javaFile = service.methodList.map {
-            MethodSpec.methodBuilder(it.name.decapitalize())
-                .addModifiers(PUBLIC, ABSTRACT)
-                .returns(TypeName.VOID)
-                .addParameter(createType(it.inputType, messageNameToJavaPackage), "input")
-                .addParameter(ParameterizedTypeName.get(ClassName.get(StreamObserver::class.java), createType(it.outputType, messageNameToJavaPackage)), "observer")
-                .build()
-        }.let {
-            val name = service.name
-            createInterface(getAsyncServiceName(name), it)
-        }.let {
-            JavaFile.builder(javaPackage, it).build()
-        }
-
-        return JavaFileSpec(createPathToJavaFile(rootPath, javaPackage, javaFile.typeSpec.name), javaFile)
-    }
-
-    private fun createInterface(javaName: String, methods: List<MethodSpec>) =
-        TypeSpec
-            .interfaceBuilder(javaName)
-            .addModifiers(PUBLIC)
-            .addMethods(methods)
-            .build()
 }

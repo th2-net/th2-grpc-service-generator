@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2020 Exactpro (Exactpro Systems Limited)
+ * Copyright 2020-2022 Exactpro (Exactpro Systems Limited)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,6 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package com.exactpro.th2.service.generator.protoc.java
 
 import com.exactpro.th2.service.AbstractGrpcService
@@ -20,6 +21,7 @@ import com.exactpro.th2.service.RetryPolicy
 import com.exactpro.th2.service.StubStorage
 import com.exactpro.th2.service.generator.protoc.FileSpec
 import com.exactpro.th2.service.generator.protoc.Generator
+import com.google.protobuf.DescriptorProtos
 import com.google.protobuf.DescriptorProtos.ServiceDescriptorProto
 import com.squareup.javapoet.ClassName
 import com.squareup.javapoet.CodeBlock
@@ -51,49 +53,67 @@ class ServiceDefaultImplGenerator : AbstractJavaServiceGenerator(), Generator {
 
     override fun generateForService(service: ServiceDescriptorProto, javaPackage: String, messageNameToJavaPackage: Map<String, String>): List<FileSpec> {
         return listOf(
-            generateBlockingDefaultImpl(service, javaPackage, messageNameToJavaPackage),
-            generateAsyncDefaultImpl(service, javaPackage, messageNameToJavaPackage)
+            generateDefaultImpl(service, false, javaPackage, messageNameToJavaPackage),
+            generateDefaultImpl(service, true, javaPackage, messageNameToJavaPackage)
         )
     }
 
-    private fun generateBlockingDefaultImpl(service: ServiceDescriptorProto, javaPackage: String, messageNameToJavaPackage: Map<String, String>): FileSpec {
-        val javaFile = service.methodList.map {
-            val methodName = it.name.decapitalize()
-            MethodSpec.methodBuilder(methodName)
-                .addModifiers(PUBLIC)
-                .returns(wrapStreaming(createType(it.outputType, messageNameToJavaPackage), it))
-                .addParameter(createType(it.inputType, messageNameToJavaPackage), "input")
-                .addCode("""
-                    ${getBlockingStubClassName(javaPackage, service.name)} stub = getStub(input);
-                    return createBlockingRequest(() -> stub.$methodName(input));
-                """.trimIndent())
-                .build()
-        }.let {
-            val name = service.name
-            createClass(getBlockingDefaultImplName(name), ClassName.get(javaPackage, getBlockingServiceName(name)), javaPackage, name, true, it)
-        }.let {
-            JavaFile.builder(javaPackage, it).build()
-        }
+    private fun generateMethod(
+        serviceName: String,
+        javaPackage: String,
+        method: DescriptorProtos.MethodDescriptorProto,
+        messageNameToJavaPackage: Map<String, String>,
+        async: Boolean,
+        withFilter: Boolean
+    ): MethodSpec {
+        val methodName = method.name.decapitalize()
+        return with(MethodSpec.methodBuilder(methodName)) {
+            addModifiers(PUBLIC)
+            returns(if (async) {
+                    TypeName.VOID
+                } else {
+                    wrapStreaming(createType(method.outputType, messageNameToJavaPackage), method)
+                })
+            addParameter(createType(method.inputType, messageNameToJavaPackage), "input")
 
-        return JavaFileSpec(createPathToJavaFile(rootPath, javaPackage, javaFile.typeSpec.name), javaFile)
+            if (withFilter) {
+                addParameter(ParameterizedTypeName.get(ClassName.get(Map::class.java), ClassName.get(String::class.java), ClassName.get(String::class.java)), "properties")
+            }
+
+            if (async) {
+                addParameter(ParameterizedTypeName.get(ClassName.get(StreamObserver::class.java), createType(method.outputType, messageNameToJavaPackage)), "observer")
+            }
+
+            if (withFilter) {
+                val stubClassName =
+                    (if (async) ::getAsyncStubClassName else ::getBlockingStubClassName)(javaPackage, serviceName)
+                addCode("$stubClassName stub = getStub(input, properties);\n")
+                addCode(
+                    if (async) {
+                        "createAsyncRequest(observer, (newObserver) -> stub.$methodName(input, newObserver));"
+                    } else {
+                        "return createBlockingRequest(() -> stub.$methodName(input));"
+                    }
+                )
+            } else {
+                if (!async) addCode("return ")
+                addCode("$methodName(input, java.util.Collections.EMPTY_MAP${if (async) ", observer" else ""});")
+            }
+            build()
+        }
     }
 
-    private fun generateAsyncDefaultImpl(service: ServiceDescriptorProto, javaPackage: String, messageNameToJavaPackage: Map<String, String>) : FileSpec {
-        val javaFile = service.methodList.map {
-            val methodName = it.name.decapitalize()
-            MethodSpec.methodBuilder(methodName)
-                .addModifiers(PUBLIC)
-                .returns(TypeName.VOID)
-                .addParameter(createType(it.inputType, messageNameToJavaPackage), "input")
-                .addParameter(ParameterizedTypeName.get(ClassName.get(StreamObserver::class.java), createType(it.outputType, messageNameToJavaPackage)), "observer")
-                .addCode("""
-                    ${getAsyncStubClassName(javaPackage, service.name)} stub = getStub(input);
-                    createAsyncRequest(observer, (newObserver) -> stub.$methodName(input, newObserver));
-                """.trimIndent())
-                .build()
+    private fun generateDefaultImpl(service: ServiceDescriptorProto, async: Boolean, javaPackage: String, messageNameToJavaPackage: Map<String, String>) : FileSpec {
+        val javaFile = service.methodList.flatMap {
+            listOf(
+                generateMethod(service.name, javaPackage, it, messageNameToJavaPackage, async, true),
+                generateMethod(service.name, javaPackage, it, messageNameToJavaPackage, async, false)
+            )
         }.let {
+            val className = (if (async) ::getAsyncDefaultImplName else ::getBlockingDefaultImplName)(service.name)
+            val interfaceName = (if (async) ::getAsyncServiceName else ::getBlockingServiceName)(service.name)
             val name = service.name
-            createClass(getAsyncDefaultImplName(name), ClassName.get(javaPackage, getAsyncServiceName(name)), javaPackage, name, false, it)
+            createClass(className, ClassName.get(javaPackage, interfaceName), javaPackage, name, !async, it)
         }.let {
             JavaFile.builder(javaPackage, it).build()
         }
@@ -112,19 +132,13 @@ class ServiceDefaultImplGenerator : AbstractJavaServiceGenerator(), Generator {
             .addMethods(methods)
             .addMethod(createCreateStubMethod(javaPackage, protoName, blocking))
             //FIXME: Added default constructor for service loader
-            .addMethod(MethodSpec.constructorBuilder().addModifiers(PUBLIC).addCode("""
-                super();
-            """.trimIndent())
-                .build()
-            )
+            .addMethod(MethodSpec.constructorBuilder().addModifiers(PUBLIC).addCode("super();\n").build())
             .addMethod(MethodSpec
                 .constructorBuilder()
                 .addModifiers(PUBLIC)
                 .addParameter(RetryPolicy::class.java, "retryConfiguration")
                 .addParameter(ParameterizedTypeName.get(ClassName.get(StubStorage::class.java), stubClassName), "serviceConfiguration")
-                .addCode("""
-                            super(retryConfiguration, serviceConfiguration);
-                        """.trimIndent())
+                .addCode("super(retryConfiguration, serviceConfiguration);")
                 .build()
             )
             .build()

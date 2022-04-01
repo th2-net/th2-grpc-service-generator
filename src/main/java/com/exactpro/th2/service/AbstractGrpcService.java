@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2021 Exactpro (Exactpro Systems Limited)
+ * Copyright 2020-2022 Exactpro (Exactpro Systems Limited)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,6 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package com.exactpro.th2.service;
 
 import com.google.protobuf.Message;
@@ -26,6 +27,7 @@ import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
@@ -90,8 +92,8 @@ public abstract class AbstractGrpcService<S extends AbstractStub<S>> {
 
     protected abstract S createStub(Channel channel, CallOptions callOptions);
 
-    protected S getStub(Message message) {
-        return stubStorage.getStub(message, this::createStub);
+    protected S getStub(Message message, Map<String, String> properties) {
+        return stubStorage.getStub(message, this::createStub, properties);
     }
 
     private class RetryStreamObserver<T> implements StreamObserver<T> {
