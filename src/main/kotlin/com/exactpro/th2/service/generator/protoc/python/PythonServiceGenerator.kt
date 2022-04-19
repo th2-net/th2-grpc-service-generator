@@ -61,8 +61,8 @@ class PythonServiceGenerator : Generator {
             """.trimIndent())
 
             service.methodList.forEach { method ->
-                builder.append("\n\n    def ${method.name}(self, request, timeout=None):\n")
-                builder.append("        return self.connector.create_request('${method.name}', request, timeout)")
+                builder.append("\n\n    def ${method.name}(self, request, timeout=None, properties=None):\n")
+                builder.append("        return self.connector.create_request('${method.name}', request, timeout, properties)")
             }
 
             PythonFileSpec(rootPath, FilenameUtils.getPath(fileName), service.name, builder.toString())
