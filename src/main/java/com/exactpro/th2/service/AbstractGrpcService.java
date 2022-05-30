@@ -27,6 +27,7 @@ import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.Collections;
 import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -94,6 +95,10 @@ public abstract class AbstractGrpcService<S extends AbstractStub<S>> {
 
     protected S getStub(Message message, Map<String, String> properties) {
         return stubStorage.getStub(message, this::createStub, properties);
+    }
+
+    protected S getStub(Message message) {
+        return stubStorage.getStub(message, this::createStub, Collections.emptyMap());
     }
 
     private class RetryStreamObserver<T> implements StreamObserver<T> {

@@ -4,10 +4,10 @@ plugins {
     id 'application'
     id 'java-library'
     id 'maven-publish'
-    id "io.github.gradle-nexus.publish-plugin" version "1.0.0"
+    id "io.github.gradle-nexus.publish-plugin" version "1.1.0"
     id 'signing'
-    id 'org.jetbrains.kotlin.jvm' version "1.3.72"
-    id 'com.github.johnrengelman.shadow' version '4.0.2'
+    id 'org.jetbrains.kotlin.jvm' version "1.5.32"
+    id 'com.github.johnrengelman.shadow' version '4.0.4'
 }
 
 group = 'com.exactpro.th2'
@@ -17,10 +17,10 @@ sourceCompatibility = JavaVersion.VERSION_11
 targetCompatibility = JavaVersion.VERSION_11
 
 ext {
-    grpcVersion         = '1.32.1'
-    protobufVersion     = '3.19.4'
-    kotlin_version      = '1.3.72'
-    slf4j_version       = '1.7.26'
+    grpcVersion         = '1.46.0'
+    protobufVersion     = '3.21.1'
+    kotlin_version      = '1.5.32'
+    slf4j_version       = '1.7.36'
     sharedDir           = file("${project.rootDir}/shared")
 }
 
@@ -42,25 +42,24 @@ repositories {
 }
 
 dependencies {
-    api platform('com.exactpro.th2:bom:3.0.0')
+    api platform('com.exactpro.th2:bom:3.1.0')
 
     // Grpc and Protobuf
     implementation "com.google.protobuf:protobuf-java:${protobufVersion}"
-    api "com.google.protobuf:protobuf-java-util"
-    api "io.grpc:grpc-stub"
-    
-    implementation "org.slf4j:slf4j-api"
-    
+    api "com.google.protobuf:protobuf-java-util:${protobufVersion}"
+    api "io.grpc:grpc-stub:${grpcVersion}"
+
+    implementation "org.slf4j:slf4j-api:${slf4j_version}"
+
     //Kotlin
-    implementation "org.jetbrains.kotlin:kotlin-stdlib"
     implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8"
 
     //For generation java code. License: Apache 2.0
     implementation "com.squareup:javapoet:1.13.0"
-    
+
     implementation "commons-io:commons-io:2.11.0"
 
-    testCompile group: 'junit', name: 'junit', version: '4.12'
+    testImplementation "org.junit.jupiter:junit-jupiter:5.8.2"
 }
 
 manifest {
@@ -200,7 +199,7 @@ shadowJar {
                 'Implementation-Version':   project.version
         )
     }
-    
+
     archiveFileName = project.name
     destinationDirectory = "$buildDir/artifacts" as File
 }

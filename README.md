@@ -61,6 +61,10 @@ protobuf {
 
 ## Release notes
 
+### 3.2.2
+
+* gRPC pins filters backward compatibility fix
+
 ### 3.2.1
 
 * gRPC pins filters support on Python
