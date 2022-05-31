@@ -61,6 +61,10 @@ protobuf {
 
 ## Release notes
 
+### 3.2.2
+
+* Fixed backward compatibility to previous version. The problem related to AbstractGrpcService.getStub signature
+
 ### 3.2.1
 
 * gRPC pins filters support on Python
