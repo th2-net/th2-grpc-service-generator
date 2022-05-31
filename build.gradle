@@ -55,6 +55,8 @@ dependencies {
     implementation "org.jetbrains.kotlin:kotlin-stdlib"
     implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8"
 
+    implementation 'io.github.microutils:kotlin-logging:2.1.23'
+
     //For generation java code. License: Apache 2.0
     implementation "com.squareup:javapoet:1.13.0"
     

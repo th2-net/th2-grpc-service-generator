@@ -19,9 +19,20 @@ package com.exactpro.th2.service
 import com.google.protobuf.Message
 import io.grpc.stub.AbstractStub
 import io.grpc.stub.AbstractStub.StubFactory
+import mu.KotlinLogging
 
 interface StubStorage<T : AbstractStub<T>> {
 
-    fun getStub(message: Message, stubFactory: StubFactory<T>, properties: Map<String, String>) : T
+    fun getStub(message: Message, stubFactory: StubFactory<T>) : T
 
+    fun getStub(message: Message, stubFactory: StubFactory<T>, properties: Map<String, String>) : T {
+        if (properties.isNotEmpty()) {
+            LOGGER.warn { "gRPC routing is unsupported, $properties are ignored" }
+        }
+        return getStub(message, stubFactory)
+    }
+
+    companion object {
+        private val LOGGER = KotlinLogging.logger { }
+    }
 }

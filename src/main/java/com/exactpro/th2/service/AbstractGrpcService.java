@@ -33,9 +33,11 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
+import static java.util.Collections.emptyMap;
+
 public abstract class AbstractGrpcService<S extends AbstractStub<S>> {
 
-    private static final Logger logger = LoggerFactory.getLogger(AbstractGrpcService.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(AbstractGrpcService.class);
     private final RetryPolicy retryPolicy;
     private final StubStorage<S> stubStorage;
 
@@ -65,7 +67,7 @@ public abstract class AbstractGrpcService<S extends AbstractStub<S>> {
                 if (e.getStatus() == Status.UNKNOWN) { // Server side thrown an exception
                     throw exception;
                 }
-                logger.warn("Can not send GRPC blocking request. Retrying. Current attempt = {}", i + 1, e);
+                LOGGER.warn("Can not send GRPC blocking request. Retrying. Current attempt = {}", i + 1, e);
             } catch (Exception e) {
                 exception.addSuppressed(e);
                 throw exception;
@@ -74,6 +76,7 @@ public abstract class AbstractGrpcService<S extends AbstractStub<S>> {
             try {
                 Thread.sleep(retryPolicy.getDelay(i));
             } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
                 exception.addSuppressed(e);
                 throw exception;
             }
@@ -91,6 +94,12 @@ public abstract class AbstractGrpcService<S extends AbstractStub<S>> {
     }
 
     protected abstract S createStub(Channel channel, CallOptions callOptions);
+
+    @Deprecated(since = "3.2.0", forRemoval = false)
+    // This method is left for backward compatibility
+    protected S getStub(Message message) {
+        return getStub(message, emptyMap());
+    }
 
     protected S getStub(Message message, Map<String, String> properties) {
         return stubStorage.getStub(message, this::createStub, properties);
@@ -120,13 +129,14 @@ public abstract class AbstractGrpcService<S extends AbstractStub<S>> {
                 if (((StatusRuntimeException)t).getStatus() == Status.UNKNOWN) { // Server side thrown an exception
                     delegate.onError(t);
                 } else {
-                    logger.warn("Can not send GRPC async request. Retrying. Current attempt = {}", currentAttempt.get() + 1, t);
+                    LOGGER.warn("Can not send GRPC async request. Retrying. Current attempt = {}", currentAttempt.get() + 1, t);
 
                     try {
                         Thread.sleep(retryPolicy.getDelay(attempt));
 
                         method.accept(this);
                     } catch (InterruptedException e) {
+                        Thread.currentThread().interrupt();
                         delegate.onError(t);
                     }
                 }
