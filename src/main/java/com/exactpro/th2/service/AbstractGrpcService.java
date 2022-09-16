@@ -22,6 +22,7 @@ import io.grpc.Channel;
 import io.grpc.Status;
 import io.grpc.StatusRuntimeException;
 import io.grpc.stub.AbstractStub;
+import io.grpc.stub.ClientResponseObserver;
 import io.grpc.stub.StreamObserver;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
@@ -29,7 +30,6 @@ import org.slf4j.LoggerFactory;
 
 import java.util.Map;
 import java.util.Objects;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
@@ -90,7 +90,11 @@ public abstract class AbstractGrpcService<S extends AbstractStub<S>> {
             throw new IllegalStateException("Not yet init");
         }
 
-        method.accept(new RetryStreamObserver<>(observer, method));
+        if (observer instanceof ClientResponseObserver) {
+            method.accept(new RetryClientResponseObserver(retryPolicy, (ClientResponseObserver<?, T>) observer, method));
+        } else {
+            method.accept(new RetryStreamObserver<>(retryPolicy, observer, method));
+        }
     }
 
     protected abstract S createStub(Channel channel, CallOptions callOptions);
@@ -104,51 +108,4 @@ public abstract class AbstractGrpcService<S extends AbstractStub<S>> {
     protected S getStub(Message message, Map<String, String> properties) {
         return stubStorage.getStub(message, this::createStub, properties);
     }
-
-    private class RetryStreamObserver<T> implements StreamObserver<T> {
-
-        private final StreamObserver<T> delegate;
-        private final Consumer<StreamObserver<T>> method;
-        private final AtomicInteger currentAttempt = new AtomicInteger(0);
-
-        public RetryStreamObserver(StreamObserver<T> delegate, Consumer<StreamObserver<T>> method) {
-            this.delegate = delegate;
-            this.method = method;
-        }
-
-        @Override
-        public void onNext(T value) {
-            delegate.onNext(value);
-        }
-
-        @Override
-        public void onError(Throwable t) {
-            int attempt = currentAttempt.getAndIncrement();
-            if (attempt < retryPolicy.getMaxAttempts() && t instanceof StatusRuntimeException) {
-
-                if (((StatusRuntimeException)t).getStatus() == Status.UNKNOWN) { // Server side thrown an exception
-                    delegate.onError(t);
-                } else {
-                    LOGGER.warn("Can not send GRPC async request. Retrying. Current attempt = {}", currentAttempt.get() + 1, t);
-
-                    try {
-                        Thread.sleep(retryPolicy.getDelay(attempt));
-
-                        method.accept(this);
-                    } catch (InterruptedException e) {
-                        Thread.currentThread().interrupt();
-                        delegate.onError(t);
-                    }
-                }
-            } else {
-                delegate.onError(t);
-            }
-        }
-
-        @Override
-        public void onCompleted() {
-            delegate.onCompleted();
-        }
-    }
-
 }
