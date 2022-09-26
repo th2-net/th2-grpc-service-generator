@@ -61,6 +61,10 @@ protobuf {
 
 ## Release notes
 
+### 3.2.3
+
+* Support for experimental proto3 optional syntax
+
 ### 3.2.2
 
 * Fixed backward compatibility to previous version. The problem related to AbstractGrpcService.getStub signature
