@@ -31,6 +31,7 @@ import org.slf4j.LoggerFactory;
 import java.util.Map;
 import java.util.Objects;
 import java.util.function.Consumer;
+import java.util.function.Function;
 import java.util.function.Supplier;
 
 import static java.util.Collections.emptyMap;
@@ -85,7 +86,8 @@ public abstract class AbstractGrpcService<S extends AbstractStub<S>> {
         throw exception;
     }
 
-    protected <T> void createAsyncRequest(StreamObserver<T> observer,  Consumer<StreamObserver<T>> method) {
+    @SuppressWarnings("unused")
+    protected <T> void createAsyncRequest(StreamObserver<T> observer, Consumer<StreamObserver<T>> method) {
         if (retryPolicy == null || stubStorage == null) {
             throw new IllegalStateException("Not yet init");
         }
@@ -95,6 +97,13 @@ public abstract class AbstractGrpcService<S extends AbstractStub<S>> {
         } else {
             method.accept(new RetryStreamObserver<>(retryPolicy, observer, method));
         }
+    }
+
+    @SuppressWarnings("unused")
+    protected <T, R> StreamObserver<R> createAsyncStreamRequest(StreamObserver<T> observer, Function<StreamObserver<T>, StreamObserver<R>> method) {
+        //FIXME: Implement retry logic
+        LOGGER.warn("Created async stream gRPC request without retry policy");
+        return method.apply(observer);
     }
 
     protected abstract S createStub(Channel channel, CallOptions callOptions);

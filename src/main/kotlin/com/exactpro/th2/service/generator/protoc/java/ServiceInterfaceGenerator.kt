@@ -20,16 +20,11 @@ import com.exactpro.th2.service.generator.protoc.FileSpec
 import com.exactpro.th2.service.generator.protoc.Generator
 import com.google.protobuf.DescriptorProtos
 import com.google.protobuf.DescriptorProtos.ServiceDescriptorProto
-import com.squareup.javapoet.ClassName
 import com.squareup.javapoet.JavaFile
 import com.squareup.javapoet.MethodSpec
-import com.squareup.javapoet.ParameterizedTypeName
-import com.squareup.javapoet.TypeName
 import com.squareup.javapoet.TypeSpec
-import io.grpc.stub.StreamObserver
 import java.nio.file.Path
-import java.util.Properties
-import javax.lang.model.element.Modifier.ABSTRACT
+import java.util.*
 import javax.lang.model.element.Modifier.PUBLIC
 
 class ServiceInterfaceGenerator : AbstractJavaServiceGenerator(), Generator {
@@ -57,43 +52,34 @@ class ServiceInterfaceGenerator : AbstractJavaServiceGenerator(), Generator {
         messageNameToJavaPackage: Map<String, String>,
         async: Boolean,
         withFilter: Boolean
-    ): MethodSpec {
-        return with(MethodSpec.methodBuilder(method.name.decapitalize()).addModifiers(PUBLIC, ABSTRACT)) {
-            returns(if (async) {
-                TypeName.VOID
-            } else {
-                wrapStreaming(createType(method.outputType, messageNameToJavaPackage), method)
-            })
+    ): MethodSpec =
+        GrpcMethodGenerationStrategy.generateInterfaceMethod(method, messageNameToJavaPackage, async, withFilter)
 
-            addParameter(createType(method.inputType, messageNameToJavaPackage), "input")
-
-            if (withFilter) {
-                addParameter(ParameterizedTypeName.get(ClassName.get(Map::class.java), ClassName.get(String::class.java), ClassName.get(String::class.java)), "properties")
+    private fun generateInterface(
+        service: ServiceDescriptorProto,
+        async: Boolean,
+        javaPackage: String,
+        messageNameToJavaPackage: Map<String, String>
+    ): FileSpec {
+        val javaFile = service.methodList.asSequence()
+            // Blocking stubs do not support client-streaming or bidirectional-streaming RPCs.
+            // https://grpc.io/docs/languages/java/generated-code/#blocking-stub
+            .filterNot { !async && it.clientStreaming }
+            .flatMap {
+                listOf(
+                    generateMethod(it, messageNameToJavaPackage, async, withFilter = false),
+                    generateMethod(it, messageNameToJavaPackage, async, withFilter = true)
+                )
+            }.toList()
+            .let {
+                val javaName = (if (async) ::getAsyncServiceName else ::getBlockingServiceName)(service.name)
+                TypeSpec.interfaceBuilder(javaName)
+                    .addModifiers(PUBLIC)
+                    .addMethods(it)
+                    .build()
+            }.let {
+                JavaFile.builder(javaPackage, it).build()
             }
-
-            if (async) {
-                addParameter(ParameterizedTypeName.get(ClassName.get(StreamObserver::class.java), createType(method.outputType, messageNameToJavaPackage)), "observer")
-            }
-
-            build()
-        }
-    }
-
-    private fun generateInterface(service: ServiceDescriptorProto, async: Boolean, javaPackage: String, messageNameToJavaPackage: Map<String, String>) : FileSpec {
-        val javaFile = service.methodList.flatMap {
-            listOf(
-                generateMethod(it, messageNameToJavaPackage, async, withFilter = false),
-                generateMethod(it, messageNameToJavaPackage, async, withFilter = true)
-            )
-        }.let {
-            val javaName = (if (async) ::getAsyncServiceName else ::getBlockingServiceName)(service.name)
-            TypeSpec.interfaceBuilder(javaName)
-                .addModifiers(PUBLIC)
-                .addMethods(it)
-                .build()
-        }.let {
-            JavaFile.builder(javaPackage, it).build()
-        }
 
         return JavaFileSpec(createPathToJavaFile(rootPath, javaPackage, javaFile.typeSpec.name), javaFile)
     }

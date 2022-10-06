@@ -28,13 +28,11 @@ import com.squareup.javapoet.CodeBlock
 import com.squareup.javapoet.JavaFile
 import com.squareup.javapoet.MethodSpec
 import com.squareup.javapoet.ParameterizedTypeName
-import com.squareup.javapoet.TypeName
 import com.squareup.javapoet.TypeSpec
 import io.grpc.CallOptions
 import io.grpc.Channel
-import io.grpc.stub.StreamObserver
 import java.nio.file.Path
-import java.util.Properties
+import java.util.*
 import javax.lang.model.element.Modifier.PROTECTED
 import javax.lang.model.element.Modifier.PUBLIC
 
@@ -66,57 +64,33 @@ class ServiceDefaultImplGenerator : AbstractJavaServiceGenerator(), Generator {
         async: Boolean,
         withFilter: Boolean
     ): MethodSpec {
-        val methodName = method.name.decapitalize()
-        return with(MethodSpec.methodBuilder(methodName)) {
-            addModifiers(PUBLIC)
-            returns(if (async) {
-                    TypeName.VOID
-                } else {
-                    wrapStreaming(createType(method.outputType, messageNameToJavaPackage), method)
-                })
-            addParameter(createType(method.inputType, messageNameToJavaPackage), "input")
-
-            if (withFilter) {
-                addParameter(ParameterizedTypeName.get(ClassName.get(Map::class.java), ClassName.get(String::class.java), ClassName.get(String::class.java)), "properties")
-            }
-
-            if (async) {
-                addParameter(ParameterizedTypeName.get(ClassName.get(StreamObserver::class.java), createType(method.outputType, messageNameToJavaPackage)), "observer")
-            }
-
-            if (withFilter) {
-                val stubClassName =
-                    (if (async) ::getAsyncStubClassName else ::getBlockingStubClassName)(javaPackage, serviceName)
-                addCode("$stubClassName stub = getStub(input, properties);\n")
-                addCode(
-                    if (async) {
-                        "createAsyncRequest(observer, (newObserver) -> stub.$methodName(input, newObserver));"
-                    } else {
-                        "return createBlockingRequest(() -> stub.$methodName(input));"
-                    }
-                )
-            } else {
-                if (!async) addCode("return ")
-                addCode("$methodName(input, java.util.Collections.EMPTY_MAP${if (async) ", observer" else ""});")
-            }
-            build()
-        }
+        return GrpcMethodGenerationStrategy.generateImplMethod(serviceName, javaPackage, method, messageNameToJavaPackage, async, withFilter)
     }
 
-    private fun generateDefaultImpl(service: ServiceDescriptorProto, async: Boolean, javaPackage: String, messageNameToJavaPackage: Map<String, String>) : FileSpec {
-        val javaFile = service.methodList.flatMap {
-            listOf(
-                generateMethod(service.name, javaPackage, it, messageNameToJavaPackage, async, true),
-                generateMethod(service.name, javaPackage, it, messageNameToJavaPackage, async, false)
-            )
-        }.let {
-            val className = (if (async) ::getAsyncDefaultImplName else ::getBlockingDefaultImplName)(service.name)
-            val interfaceName = (if (async) ::getAsyncServiceName else ::getBlockingServiceName)(service.name)
-            val name = service.name
-            createClass(className, ClassName.get(javaPackage, interfaceName), javaPackage, name, !async, it)
-        }.let {
-            JavaFile.builder(javaPackage, it).build()
-        }
+    private fun generateDefaultImpl(
+        service: ServiceDescriptorProto,
+        async: Boolean,
+        javaPackage: String,
+        messageNameToJavaPackage: Map<String, String>
+    ): FileSpec {
+        val javaFile = service.methodList.asSequence()
+            // Blocking stubs do not support client-streaming or bidirectional-streaming RPCs.
+            // https://grpc.io/docs/languages/java/generated-code/#blocking-stub
+            .filterNot { !async && it.clientStreaming }
+            .flatMap {
+                listOf(
+                    generateMethod(service.name, javaPackage, it, messageNameToJavaPackage, async, true),
+                    generateMethod(service.name, javaPackage, it, messageNameToJavaPackage, async, false)
+                )
+            }.toList()
+            .let {
+                val className = (if (async) ::getAsyncDefaultImplName else ::getBlockingDefaultImplName)(service.name)
+                val interfaceName = (if (async) ::getAsyncServiceName else ::getBlockingServiceName)(service.name)
+                val name = service.name
+                createClass(className, ClassName.get(javaPackage, interfaceName), javaPackage, name, !async, it)
+            }.let {
+                JavaFile.builder(javaPackage, it).build()
+            }
 
         return JavaFileSpec(createPathToJavaFile(rootPath, javaPackage, javaFile.typeSpec.name), javaFile)
     }
