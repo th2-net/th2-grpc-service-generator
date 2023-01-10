@@ -206,3 +206,7 @@ shadowJar {
     archiveFileName = project.name
     destinationDirectory = "$buildDir/artifacts" as File
 }
+
+dependencyLocking {    
+    lockAllConfigurations()
+}
