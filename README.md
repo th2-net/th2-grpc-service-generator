@@ -63,7 +63,7 @@ protobuf {
 
 ### 3.3.0
 
-+ BOM updated to `4.1.0`
++ BOM updated to `4.2.0`
 + Kotlin updated to `1.6.21`
 + Protobuf updated to `3.21.12`
 + Added GitHub workflow with vulnerabilities scanning
