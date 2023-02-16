@@ -61,6 +61,13 @@ protobuf {
 
 ## Release notes
 
+### 3.3.0
+
++ BOM updated to `4.1.0`
++ Kotlin updated to `1.6.21`
++ Protobuf updated to `3.21.12`
++ Added GitHub workflow with vulnerabilities scanning
+
 ### 3.2.2
 
 * Fixed backward compatibility to previous version. The problem related to AbstractGrpcService.getStub signature
