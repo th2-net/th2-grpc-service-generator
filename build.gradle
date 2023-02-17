@@ -6,8 +6,9 @@ plugins {
     id 'maven-publish'
     id "io.github.gradle-nexus.publish-plugin" version "1.0.0"
     id 'signing'
-    id 'org.jetbrains.kotlin.jvm' version "1.3.72"
+    id 'org.jetbrains.kotlin.jvm' version "1.6.21"
     id 'com.github.johnrengelman.shadow' version '4.0.2'
+    id "org.owasp.dependencycheck" version "8.1.0"
 }
 
 group = 'com.exactpro.th2'
@@ -17,10 +18,8 @@ sourceCompatibility = JavaVersion.VERSION_11
 targetCompatibility = JavaVersion.VERSION_11
 
 ext {
-    grpcVersion         = '1.32.1'
-    protobufVersion     = '3.19.4'
-    kotlin_version      = '1.3.72'
-    slf4j_version       = '1.7.26'
+    grpcVersion         = '1.48.1'
+    protobufVersion     = '3.21.12'
     sharedDir           = file("${project.rootDir}/shared")
 }
 
@@ -42,7 +41,7 @@ repositories {
 }
 
 dependencies {
-    api platform('com.exactpro.th2:bom:3.0.0')
+    api platform('com.exactpro.th2:bom:4.2.0')
 
     // Grpc and Protobuf
     implementation "com.google.protobuf:protobuf-java:${protobufVersion}"
@@ -205,4 +204,8 @@ shadowJar {
     
     archiveFileName = project.name
     destinationDirectory = "$buildDir/artifacts" as File
+}
+
+dependencyLocking {
+    lockAllConfigurations()
 }
