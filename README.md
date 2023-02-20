@@ -61,6 +61,12 @@ protobuf {
 
 ## Release notes
 
+### 3.3.1
+
+* Support for experimental proto3 optional syntax.
+  **NOTE: if you make field optional it might not be backward-compatible for some languages.**
+  **Please, read [rules for changing messages](https://protobuf.dev/programming-guides/proto3/#updating) first.**
+
 ### 3.3.0
 
 + BOM updated to `4.2.0`

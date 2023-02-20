@@ -23,6 +23,7 @@ import java.io.IOException
 import java.io.InputStream
 import java.io.OutputStream
 import java.util.Properties
+import com.google.protobuf.compiler.PluginProtos.CodeGeneratorResponse
 
 class PluginRun(private val generators: List<Generator>) {
 
@@ -72,6 +73,7 @@ class PluginRun(private val generators: List<Generator>) {
         }
 
         val buffered = outputStream.buffered()
+        builder.supportedFeatures = CodeGeneratorResponse.Feature.FEATURE_PROTO3_OPTIONAL_VALUE.toLong()
         builder.build().writeTo(buffered)
         buffered.flush()
     }
