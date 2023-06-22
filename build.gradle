@@ -53,7 +53,7 @@ dependencies {
 
     implementation "commons-io:commons-io"
 
-    testImplementation 'org.junit.jupiter :junit-jupiter:5.9.3'
+    testImplementation 'org.junit.jupiter:junit-jupiter:5.9.3'
 }
 
 manifest {
