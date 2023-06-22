@@ -74,7 +74,7 @@ protobuf {
 
 ## Release notes
 
-### 3.4.1
+### 3.4.0
 
 * BOM updated to `4.4.0`
 
