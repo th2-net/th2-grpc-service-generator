@@ -4,8 +4,12 @@ on:
   push:
     branches-ignore:
     - master
+    - version-*
+    - dependabot*
     # paths:
     # - gradle.properties
+    paths-ignore:
+      - README.md
 
 jobs:
   build-job:
@@ -13,7 +17,7 @@ jobs:
     with:
       build-target: 'Sonatype'
       runsOn: ubuntu-latest
-      gradleVersion: '6'
+      gradleVersion: '7'
     secrets:
       sonatypeUsername: ${{ secrets.SONATYPE_NEXUS_USERNAME }}
       sonatypePassword: ${{ secrets.SONATYPE_NEXUS_PASSWORD }}
