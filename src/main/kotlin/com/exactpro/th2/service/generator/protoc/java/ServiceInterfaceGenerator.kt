@@ -28,6 +28,7 @@ import com.squareup.javapoet.TypeName
 import com.squareup.javapoet.TypeSpec
 import io.grpc.stub.StreamObserver
 import java.nio.file.Path
+import java.util.Locale
 import java.util.Properties
 import javax.lang.model.element.Modifier.ABSTRACT
 import javax.lang.model.element.Modifier.PUBLIC
@@ -58,7 +59,8 @@ class ServiceInterfaceGenerator : AbstractJavaServiceGenerator(), Generator {
         async: Boolean,
         withFilter: Boolean
     ): MethodSpec {
-        return with(MethodSpec.methodBuilder(method.name.decapitalize()).addModifiers(PUBLIC, ABSTRACT)) {
+        val methodName = method.name.replaceFirstChar { it.lowercase(Locale.getDefault()) }
+        return with(MethodSpec.methodBuilder(methodName).addModifiers(PUBLIC, ABSTRACT)) {
             returns(if (async) {
                 TypeName.VOID
             } else {

@@ -50,7 +50,7 @@ class MetaInfGenerator : AbstractJavaServiceGenerator() {
         }
     }
 
-    override fun generateForService(serviceDescriptorProto: ServiceDescriptorProto, javaPackage: String, messageNameToJavaPackage: Map<String, String>): List<FileSpec> {
+    override fun generateForService(service: ServiceDescriptorProto, javaPackage: String, messageNameToJavaPackage: Map<String, String>): List<FileSpec> {
         return emptyList()
     }
 

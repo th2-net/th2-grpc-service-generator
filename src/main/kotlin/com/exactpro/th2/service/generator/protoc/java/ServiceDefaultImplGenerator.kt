@@ -34,6 +34,7 @@ import io.grpc.CallOptions
 import io.grpc.Channel
 import io.grpc.stub.StreamObserver
 import java.nio.file.Path
+import java.util.Locale
 import java.util.Properties
 import javax.lang.model.element.Modifier.PROTECTED
 import javax.lang.model.element.Modifier.PUBLIC
@@ -66,7 +67,7 @@ class ServiceDefaultImplGenerator : AbstractJavaServiceGenerator(), Generator {
         async: Boolean,
         withFilter: Boolean
     ): MethodSpec {
-        val methodName = method.name.decapitalize()
+        val methodName = method.name.replaceFirstChar { it.lowercase(Locale.getDefault()) }
         return with(MethodSpec.methodBuilder(methodName)) {
             addModifiers(PUBLIC)
             returns(if (async) {

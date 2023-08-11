@@ -1,11 +1,16 @@
 # Overview
-This project implements a **protoc** plugin to generate services for gRPC router.
-It generates wrappers for Java's and Python's gRPC implementation.
-You can plug it directly to protoc or run it from the command line itself.
+
+This project implements a **protoc** plugin to generate services for gRPC router. It generates wrappers for Java's and
+Python's gRPC implementation. You can plug it directly to protoc or run it from the command line itself.
+
 # Usage
+
 ## Protoc plugin
-If you want to use this generator with Gradle and the protobuf plugin, you should add the project's artifact to the protoc plugin's section and add the required options to the proto generated tasks
-It is possible to set the following options:
+
+If you want to use this generator with Gradle and the protobuf plugin, you should add the project's artifact to the
+protoc plugin's section and add the required options to the proto generated tasks It is possible to set the following
+options:
+
 1. javaInterfacesPath - the path for Java services interfaces
 1. javaInterfacesImplPath - the path for TH2 services implementations
 1. javaMetaInfPath - the path for ServiceLoader files
@@ -13,7 +18,9 @@ It is possible to set the following options:
 1. enableJava - the flag for turning on/off the generation of files for Java language (default: true)
 1. enablePython - the flag for turning on/off the generation of files for Python language (default: true)
 
-All these paths are relative to the directory in  ``generateProtoTasks.generatedFilesBaseDir`` parameter (Example: `javaInterfacesPath` = `path/to/base/dir/path/to/interfaces`)
+All these paths are relative to the directory in  ``generateProtoTasks.generatedFilesBaseDir`` parameter (
+Example: `javaInterfacesPath` = `path/to/base/dir/path/to/interfaces`)
+
 ```groovy
 protobuf {
     protoc {
@@ -43,12 +50,18 @@ protobuf {
     }
 }
 ```
+
 ## Command line
-You can run this project using the command line. In order to this you can refer to the project's artifact which is used in Gradle protobuf's plugin. 
 
-The first argument should be the directory or the file with ``FileDescriptorSet``. The second argument is the output directory. After those arguments you can set the options (Example: `--pythonPath=./path/to/python`)
+You can run this project using the command line. In order to this you can refer to the project's artifact which is used
+in Gradle protobuf's plugin.
 
-``FileDescriptorSet`` is a special protobuf's object which describes the proto files. You can generate it with Gradle's protobuf plugin
+The first argument should be the directory or the file with ``FileDescriptorSet``. The second argument is the output
+directory. After those arguments you can set the options (Example: `--pythonPath=./path/to/python`)
+
+``FileDescriptorSet`` is a special protobuf's object which describes the proto files. You can generate it with Gradle's
+protobuf plugin
+
 ```groovy
 protobuf {
     //...
@@ -60,6 +73,10 @@ protobuf {
 ```
 
 ## Release notes
+
+### 3.4.0
+
+* BOM updated to `4.4.0`
 
 ### 3.3.1
 
