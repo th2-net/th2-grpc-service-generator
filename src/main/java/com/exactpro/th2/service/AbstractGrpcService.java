@@ -147,19 +147,33 @@ public abstract class AbstractGrpcService<S extends AbstractStub<S>> {
             int attempt = currentAttempt.getAndIncrement();
             if (attempt < retryPolicy.getMaxAttempts() && t instanceof StatusRuntimeException) {
 
-                if (((StatusRuntimeException)t).getStatus() == Status.UNKNOWN) { // Server side thrown an exception
-                    delegate.onError(t);
-                } else {
-                    LOGGER.warn("Can not send GRPC async request. Retrying. Current attempt = {}", currentAttempt.get() + 1, t);
-
-                    try {
-                        Thread.sleep(retryPolicy.getDelay(attempt));
-
-                        method.accept(this);
-                    } catch (InterruptedException e) {
-                        Thread.currentThread().interrupt();
+                Status status = ((StatusRuntimeException) t).getStatus();
+                Status.Code statusCode = status.getCode();
+                switch (statusCode) {
+                    case UNKNOWN:
+                    case DEADLINE_EXCEEDED:
                         delegate.onError(t);
-                    }
+                        break;
+                    case CANCELLED:
+                        if (retryPolicy.retryInterruptedTransaction()
+                                && STATUS_DESCRIPTION_OF_INTERRUPTED_REQUEST.equals(status.getDescription())) {
+                            LOGGER.warn("GRPC blocking request has been interrupted during handle");
+                            method.accept(this);
+                        } else {
+                            delegate.onError(t);
+                        }
+                        break;
+                    default:
+                        LOGGER.warn("Can not send GRPC async request. Retrying. Current attempt = {}", currentAttempt.get() + 1, t);
+
+                        try {
+                            Thread.sleep(retryPolicy.getDelay(attempt));
+                            method.accept(this);
+                        } catch (InterruptedException e) {
+                            Thread.currentThread().interrupt();
+                            delegate.onError(t);
+                        }
+                        break;
                 }
             } else {
                 delegate.onError(t);
