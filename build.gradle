@@ -41,6 +41,9 @@ dependencies {
     api "com.google.protobuf:protobuf-java-util"
     api "io.grpc:grpc-stub"
 
+
+    implementation "io.netty:netty-codec-http2"
+
     implementation "com.google.protobuf:protobuf-java"
 
     implementation "org.slf4j:slf4j-api"

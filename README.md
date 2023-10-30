@@ -1,4 +1,4 @@
-# Overview
+# Overview (3.5.0)
 
 This project implements a **protoc** plugin to generate services for gRPC router. It generates wrappers for Java's and
 Python's gRPC implementation. You can plug it directly to protoc or run it from the command line itself.
@@ -73,6 +73,12 @@ protobuf {
 ```
 
 ## Release notes
+
+### 3.5.0
+
+* Added RetryPolicy.retryInterruptedTransaction method to manage behaviour of gRPC retry 
+  when transaction is interrupted intermediate of execution.
+* Fixed retry behavior when request is interrupted by deadline or cancel.
 
 ### 3.4.0
 
