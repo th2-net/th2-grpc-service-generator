@@ -27,6 +27,8 @@ import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.annotation.concurrent.NotThreadSafe;
+import java.util.Iterator;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
@@ -104,6 +106,14 @@ public abstract class AbstractGrpcService<S extends AbstractStub<S>> {
         throw exception;
     }
 
+    protected <T> Iterator<T> createBlockingServerStreamingRequest(Supplier<Iterator<T>> method) {
+        if (retryPolicy == null || stubStorage == null) {
+            throw new IllegalStateException("Not yet init");
+        }
+
+        return new RetryIterator<T>(method);
+    }
+
     protected <T> void createAsyncRequest(StreamObserver<T> observer,  Consumer<StreamObserver<T>> method) {
         if (retryPolicy == null || stubStorage == null) {
             throw new IllegalStateException("Not yet init");
@@ -123,6 +133,84 @@ public abstract class AbstractGrpcService<S extends AbstractStub<S>> {
     protected S getStub(Message message, Map<String, String> properties) {
         return requireNonNull(stubStorage, "'Stubs storage' can't be null")
                 .getStub(message, this::createStub, properties);
+    }
+
+    @NotThreadSafe
+    private class RetryIterator<T> implements Iterator<T> {
+        private final Supplier<Iterator<T>> method;
+        private Iterator<T> internal;
+        private int currentAttempt = 0;
+        private boolean hasResponse = false;
+
+        public RetryIterator(Supplier<Iterator<T>> method) {
+            this.method = method;
+            this.internal = method.get();
+        }
+
+        @Override
+        public boolean hasNext() {
+            try {
+                return this.internal.hasNext();
+            } catch (StatusRuntimeException e) {
+                return handleError(e, this::hasNext);
+            } finally {
+                hasResponse = true;
+            }
+        }
+
+        @Override
+        public T next() {
+            try {
+                return this.internal.next();
+            } catch (StatusRuntimeException e) {
+                return handleError(e, this::next);
+            } finally {
+                hasResponse = true;
+            }
+        }
+
+        private <R> R handleError(StatusRuntimeException t, Supplier<R> methodCall) {
+            if (hasResponse) {
+                throw new IllegalStateException("Request failures mid-transfer", t);
+            }
+
+            requireNonNull(retryPolicy, "'Retry policy' can't be null");
+            int attempt = ++currentAttempt;
+            if (attempt < retryPolicy.getMaxAttempts()) {
+
+                Status status = t.getStatus();
+                Status.Code statusCode = status.getCode();
+                switch (statusCode) {
+                    case UNKNOWN:
+                    case DEADLINE_EXCEEDED:
+                        throw new IllegalStateException("Request failures by deadline exceeded reason", t);
+                    case CANCELLED:
+                        if (retryPolicy.retryInterruptedTransaction()
+                                && STATUS_DESCRIPTION_OF_INTERRUPTED_REQUEST.equals(status.getDescription())) {
+                            LOGGER.warn("GRPC blocking request has been interrupted during handle");
+                            this.internal = method.get();
+                            return methodCall.get();
+                        } else {
+                            throw new IllegalStateException("Request failures by cancelled reason", t);
+                        }
+                    default:
+                        LOGGER.warn("Can not send GRPC async request. Retrying. Current attempt = {}", currentAttempt + 1, t);
+
+                        try {
+                            Thread.sleep(retryPolicy.getDelay(attempt));
+                            this.internal = method.get();
+                            return methodCall.get();
+                        } catch (InterruptedException e) {
+                            Thread.currentThread().interrupt();
+                            RuntimeException exception = new IllegalStateException("Request failures by cancelled reason", t);
+                            exception.addSuppressed(e);
+                            throw exception;
+                        }
+                }
+            } else {
+                throw new IllegalStateException("Request failures by unknown exception reason", t);
+            }
+        }
     }
 
     private class RetryStreamObserver<T> implements StreamObserver<T> {
