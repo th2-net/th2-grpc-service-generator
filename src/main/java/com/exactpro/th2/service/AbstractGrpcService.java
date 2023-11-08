@@ -69,10 +69,6 @@ public abstract class AbstractGrpcService<S extends AbstractStub<S>> {
     }
 
     protected <T> Iterator<T> createBlockingServerStreamingRequest(Supplier<Iterator<T>> method) {
-        if (retryPolicy == null || stubStorage == null) {
-            throw new IllegalStateException("Not yet init");
-        }
-
         return new RetryIterator<>(method);
     }
 
@@ -121,7 +117,7 @@ public abstract class AbstractGrpcService<S extends AbstractStub<S>> {
                 }
 
                 try {
-                    Thread.sleep(retryPolicy.getDelay(attempt));
+                    Thread.sleep(retryPolicy.getDelay(attempt - 1));
                 } catch (InterruptedException e) {
                     Thread.currentThread().interrupt();
                     retryRootException.addSuppressed(e);
