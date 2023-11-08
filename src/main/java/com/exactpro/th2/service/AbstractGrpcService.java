@@ -51,6 +51,7 @@ public abstract class AbstractGrpcService<S extends AbstractStub<S>> {
      */
     public static final String STATUS_DESCRIPTION_OF_INTERRUPTED_REQUEST = "RST_STREAM closed stream. HTTP/2 error code: CANCEL";
     public static final String ROOT_RETRY_SYNC_EXCEPTION_MESSAGE = "Can not execute GRPC blocking request";
+    public static final String MID_TRANSFER_FAILURE_EXCEPTION_MESSAGE = "Retry can't be executed because the current session has received response(es)";
     private final RetryPolicy retryPolicy;
     private final StubStorage<S> stubStorage;
 
@@ -182,7 +183,7 @@ public abstract class AbstractGrpcService<S extends AbstractStub<S>> {
 
         private void checkRetryPermission(StatusRuntimeException e) {
             if (hasResponse) {
-                throw new IllegalStateException("Request failures mid-transfer", e);
+                throw new IllegalStateException(MID_TRANSFER_FAILURE_EXCEPTION_MESSAGE, e);
             }
         }
         private boolean retryHasNext() {
@@ -201,6 +202,7 @@ public abstract class AbstractGrpcService<S extends AbstractStub<S>> {
         private final StreamObserver<T> delegate;
         private final Consumer<StreamObserver<T>> method;
         private final AtomicInteger currentAttempt = new AtomicInteger(0);
+        private volatile boolean hasResponse = false;
 
         public RetryStreamObserver(StreamObserver<T> delegate, Consumer<StreamObserver<T>> method) {
             this.delegate = delegate;
@@ -209,6 +211,7 @@ public abstract class AbstractGrpcService<S extends AbstractStub<S>> {
 
         @Override
         public void onNext(T value) {
+            hasResponse = true;
             delegate.onNext(value);
         }
 
@@ -228,8 +231,12 @@ public abstract class AbstractGrpcService<S extends AbstractStub<S>> {
                     case CANCELLED:
                         if (retryPolicy.retryInterruptedTransaction()
                                 && STATUS_DESCRIPTION_OF_INTERRUPTED_REQUEST.equals(status.getDescription())) {
-                            LOGGER.warn("GRPC blocking request has been interrupted during handle");
-                            method.accept(this);
+                            if (hasResponse) {
+                                emitMidTransferError(t);
+                            } else {
+                                LOGGER.warn("GRPC async request has been interrupted during handle");
+                                method.accept(this);
+                            }
                         } else {
                             delegate.onError(t);
                         }
@@ -237,18 +244,28 @@ public abstract class AbstractGrpcService<S extends AbstractStub<S>> {
                     default:
                         LOGGER.warn("Can not send GRPC async request. Retrying. Current attempt = {}", currentAttempt.get() + 1, t);
 
-                        try {
-                            Thread.sleep(retryPolicy.getDelay(attempt));
-                            method.accept(this);
-                        } catch (InterruptedException e) {
-                            Thread.currentThread().interrupt();
-                            delegate.onError(t);
+                        if (hasResponse) {
+                            emitMidTransferError(t);
+                        } else {
+                            try {
+                                Thread.sleep(retryPolicy.getDelay(attempt));
+                                method.accept(this);
+                            } catch (InterruptedException e) {
+                                Thread.currentThread().interrupt();
+                                delegate.onError(t);
+                            }
                         }
                         break;
                 }
             } else {
                 delegate.onError(t);
             }
+        }
+
+        private void emitMidTransferError(Throwable t) {
+            IllegalStateException exception = new IllegalStateException(MID_TRANSFER_FAILURE_EXCEPTION_MESSAGE);
+            exception.addSuppressed(t);
+            delegate.onError(exception);
         }
 
         @Override
