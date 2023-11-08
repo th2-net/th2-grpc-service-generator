@@ -108,18 +108,18 @@ public abstract class AbstractGrpcService<S extends AbstractStub<S>> {
 
             for (int attempt = 1; attempt <= retryPolicy.getMaxAttempts(); attempt++) {
                 try {
-                    return retryCall.get();
-                } catch (StatusRuntimeException e) {
-                    handleStatusRuntimeException(retryPolicy, retryRootException, e, attempt);
-                } catch (Exception e) {
+                    Thread.sleep(retryPolicy.getDelay(attempt - 1));
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
                     retryRootException.addSuppressed(e);
                     throw retryRootException;
                 }
 
                 try {
-                    Thread.sleep(retryPolicy.getDelay(attempt - 1));
-                } catch (InterruptedException e) {
-                    Thread.currentThread().interrupt();
+                    return retryCall.get();
+                } catch (StatusRuntimeException e) {
+                    handleStatusRuntimeException(retryPolicy, retryRootException, e, attempt);
+                } catch (Exception e) {
                     retryRootException.addSuppressed(e);
                     throw retryRootException;
                 }
@@ -182,9 +182,7 @@ public abstract class AbstractGrpcService<S extends AbstractStub<S>> {
 
         private void checkRetryPermission(StatusRuntimeException e) {
             if (hasResponse) {
-                IllegalStateException exception = new IllegalStateException("Request failures mid-transfer", e);
-                exception.addSuppressed(e);
-                throw exception;
+                throw new IllegalStateException("Request failures mid-transfer", e);
             }
         }
         private boolean retryHasNext() {
