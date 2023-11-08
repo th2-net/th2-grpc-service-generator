@@ -32,6 +32,7 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
+import java.util.function.Function;
 import java.util.function.Supplier;
 
 import static java.util.Collections.emptyMap;
@@ -49,6 +50,7 @@ public abstract class AbstractGrpcService<S extends AbstractStub<S>> {
      * {@link io.netty.handler.codec.http2.DefaultHttp2FrameReader}.readRstStreamFrame@509
      */
     public static final String STATUS_DESCRIPTION_OF_INTERRUPTED_REQUEST = "RST_STREAM closed stream. HTTP/2 error code: CANCEL";
+    public static final String ROOT_RETRY_SYNC_EXCEPTION_MESSAGE = "Can not execute GRPC blocking request";
     private final RetryPolicy retryPolicy;
     private final StubStorage<S> stubStorage;
 
@@ -63,47 +65,7 @@ public abstract class AbstractGrpcService<S extends AbstractStub<S>> {
     }
 
     protected <T> T createBlockingRequest(Supplier<T> method) {
-
-        if (retryPolicy == null || stubStorage == null) {
-            throw new IllegalStateException("Not yet init");
-        }
-
-        RuntimeException exception = new RuntimeException("Can not execute GRPC blocking request");
-
-        for (int i = 0; i < retryPolicy.getMaxAttempts(); i++) {
-            try {
-                return method.get();
-            } catch (StatusRuntimeException e) {
-                exception.addSuppressed(e);
-                Status.Code statusCode = e.getStatus().getCode();
-                switch (statusCode) {
-                    case UNKNOWN:
-                    case DEADLINE_EXCEEDED:
-                        throw exception;
-                    case CANCELLED:
-                        if (retryPolicy.retryInterruptedTransaction()
-                            && STATUS_DESCRIPTION_OF_INTERRUPTED_REQUEST.equals(e.getStatus().getDescription())) {
-                            LOGGER.warn("GRPC blocking request has been interrupted during handle");
-                        } else {
-                            throw exception;
-                        }
-                }
-                LOGGER.warn("Can not send GRPC blocking request. Retrying. Current attempt = {}", i + 1, e);
-            } catch (Exception e) {
-                exception.addSuppressed(e);
-                throw exception;
-            }
-
-            try {
-                Thread.sleep(retryPolicy.getDelay(i));
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-                exception.addSuppressed(e);
-                throw exception;
-            }
-        }
-
-        throw exception;
+        return executeWithRetrySync(method);
     }
 
     protected <T> Iterator<T> createBlockingServerStreamingRequest(Supplier<Iterator<T>> method) {
@@ -111,7 +73,7 @@ public abstract class AbstractGrpcService<S extends AbstractStub<S>> {
             throw new IllegalStateException("Not yet init");
         }
 
-        return new RetryIterator<T>(method);
+        return new RetryIterator<>(method);
     }
 
     protected <T> void createAsyncRequest(StreamObserver<T> observer,  Consumer<StreamObserver<T>> method) {
@@ -135,11 +97,72 @@ public abstract class AbstractGrpcService<S extends AbstractStub<S>> {
                 .getStub(message, this::createStub, properties);
     }
 
+    private <T> T executeWithRetrySync(Supplier<T> firstCall, Supplier<T> retryCall, Consumer<StatusRuntimeException> checkRetryPermission) {
+        try {
+            return firstCall.get();
+        } catch (StatusRuntimeException firstException) {
+            checkRetryPermission.accept(firstException);
+            if (retryPolicy == null) {
+                IllegalStateException exception = new IllegalStateException("Not yet init");
+                exception.addSuppressed(firstException);
+                throw exception;
+            }
+            RuntimeException retryRootException = new RuntimeException(ROOT_RETRY_SYNC_EXCEPTION_MESSAGE);
+            handleStatusRuntimeException(retryPolicy, retryRootException, firstException, 0);
+
+            for (int attempt = 1; attempt <= retryPolicy.getMaxAttempts(); attempt++) {
+                try {
+                    return retryCall.get();
+                } catch (StatusRuntimeException e) {
+                    handleStatusRuntimeException(retryPolicy, retryRootException, e, attempt);
+                } catch (Exception e) {
+                    retryRootException.addSuppressed(e);
+                    throw retryRootException;
+                }
+
+                try {
+                    Thread.sleep(retryPolicy.getDelay(attempt));
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                    retryRootException.addSuppressed(e);
+                    throw retryRootException;
+                }
+            }
+
+            throw retryRootException;
+        } catch (RuntimeException e) {
+            throw new RuntimeException(ROOT_RETRY_SYNC_EXCEPTION_MESSAGE, e);
+        }
+    }
+
+    private <T> T executeWithRetrySync(Supplier<T> call) {
+        return executeWithRetrySync(call, call, Function.identity()::apply);
+    }
+
+    private void handleStatusRuntimeException(@NotNull RetryPolicy retryPolicy,
+                                              @NotNull RuntimeException retryRootExp,
+                                              @NotNull StatusRuntimeException grpcExp,
+                                              int attempt) {
+        retryRootExp.addSuppressed(grpcExp);
+        Status.Code statusCode = grpcExp.getStatus().getCode();
+        switch (statusCode) {
+            case UNKNOWN:
+            case DEADLINE_EXCEEDED:
+                throw retryRootExp;
+            case CANCELLED:
+                if (retryPolicy.retryInterruptedTransaction()
+                        && STATUS_DESCRIPTION_OF_INTERRUPTED_REQUEST.equals(grpcExp.getStatus().getDescription())) {
+                    LOGGER.warn("GRPC blocking request has been interrupted during handle");
+                } else {
+                    throw retryRootExp;
+                }
+        }
+        LOGGER.warn("Can not send GRPC blocking request. Retrying. Current attempt = {}", attempt, grpcExp);
+    }
     @NotThreadSafe
     private class RetryIterator<T> implements Iterator<T> {
         private final Supplier<Iterator<T>> method;
         private Iterator<T> internal;
-        private int currentAttempt = 0;
         private boolean hasResponse = false;
 
         public RetryIterator(Supplier<Iterator<T>> method) {
@@ -149,67 +172,33 @@ public abstract class AbstractGrpcService<S extends AbstractStub<S>> {
 
         @Override
         public boolean hasNext() {
-            try {
-                return this.internal.hasNext();
-            } catch (StatusRuntimeException e) {
-                return handleError(e, this::hasNext);
-            } finally {
-                hasResponse = true;
-            }
+            boolean result = executeWithRetrySync(internal::hasNext, this::retryHasNext, this::checkRetryPermission);
+            hasResponse = true;
+            return result;
         }
 
         @Override
         public T next() {
-            try {
-                return this.internal.next();
-            } catch (StatusRuntimeException e) {
-                return handleError(e, this::next);
-            } finally {
-                hasResponse = true;
-            }
+            T result = executeWithRetrySync(internal::next, this::retryNext, this::checkRetryPermission);
+            hasResponse = true;
+            return result;
         }
 
-        private <R> R handleError(StatusRuntimeException t, Supplier<R> methodCall) {
+        private void checkRetryPermission(StatusRuntimeException e) {
             if (hasResponse) {
-                throw new IllegalStateException("Request failures mid-transfer", t);
+                IllegalStateException exception = new IllegalStateException("Request failures mid-transfer", e);
+                exception.addSuppressed(e);
+                throw exception;
             }
+        }
+        private boolean retryHasNext() {
+            internal = method.get();
+            return internal.hasNext();
+        }
 
-            requireNonNull(retryPolicy, "'Retry policy' can't be null");
-            int attempt = ++currentAttempt;
-            if (attempt < retryPolicy.getMaxAttempts()) {
-
-                Status status = t.getStatus();
-                Status.Code statusCode = status.getCode();
-                switch (statusCode) {
-                    case UNKNOWN:
-                    case DEADLINE_EXCEEDED:
-                        throw new IllegalStateException("Request failures by deadline exceeded reason", t);
-                    case CANCELLED:
-                        if (retryPolicy.retryInterruptedTransaction()
-                                && STATUS_DESCRIPTION_OF_INTERRUPTED_REQUEST.equals(status.getDescription())) {
-                            LOGGER.warn("GRPC blocking request has been interrupted during handle");
-                            this.internal = method.get();
-                            return methodCall.get();
-                        } else {
-                            throw new IllegalStateException("Request failures by cancelled reason", t);
-                        }
-                    default:
-                        LOGGER.warn("Can not send GRPC async request. Retrying. Current attempt = {}", currentAttempt + 1, t);
-
-                        try {
-                            Thread.sleep(retryPolicy.getDelay(attempt));
-                            this.internal = method.get();
-                            return methodCall.get();
-                        } catch (InterruptedException e) {
-                            Thread.currentThread().interrupt();
-                            RuntimeException exception = new IllegalStateException("Request failures by cancelled reason", t);
-                            exception.addSuppressed(e);
-                            throw exception;
-                        }
-                }
-            } else {
-                throw new IllegalStateException("Request failures by unknown exception reason", t);
-            }
+        private T retryNext() {
+            internal = method.get();
+            return internal.next();
         }
     }
 
