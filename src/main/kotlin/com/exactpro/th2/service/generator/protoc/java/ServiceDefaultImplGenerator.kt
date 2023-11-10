@@ -93,7 +93,11 @@ class ServiceDefaultImplGenerator : AbstractJavaServiceGenerator(), Generator {
                     if (async) {
                         "createAsyncRequest(observer, (newObserver) -> stub.$methodName(input, newObserver));"
                     } else {
-                        "return createBlockingRequest(() -> stub.$methodName(input));"
+                        if (method.serverStreaming) {
+                            "return createBlockingServerStreamingRequest(() -> stub.$methodName(input));"
+                        } else {
+                            "return createBlockingRequest(() -> stub.$methodName(input));"
+                        }
                     }
                 )
             } else {
