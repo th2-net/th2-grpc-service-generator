@@ -35,7 +35,7 @@ repositories {
 }
 
 dependencies {
-    api platform('com.exactpro.th2:bom:4.6.0-update-bom-8129602206-434846f-SNAPSHOT')
+    api platform('com.exactpro.th2:bom:4.6.0')
 
     // Grpc and Protobuf
     api "com.google.protobuf:protobuf-java-util"
