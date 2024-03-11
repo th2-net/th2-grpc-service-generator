@@ -74,6 +74,11 @@ protobuf {
 
 ## Release notes
 
+### 3.6.0
+
+* Update kotlin 1.6.21 -> 1.8.22
+* Update th2 bom 4.4.0 -> 4.6.0
+
 ### 3.5.1
 
 * Support retry for one request multiple responses gRPC methods
