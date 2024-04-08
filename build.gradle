@@ -1,21 +1,19 @@
 plugins {
-    id 'java'
     id 'idea'
     id 'application'
     id 'java-library'
     id 'maven-publish'
-    id "io.github.gradle-nexus.publish-plugin" version "1.3.0"
-    id 'signing'
     id 'org.jetbrains.kotlin.jvm' version "1.8.22"
     id 'com.github.johnrengelman.shadow' version '7.1.2'
-    id "org.owasp.dependencycheck" version "9.0.9"
+    id 'com.exactpro.th2.gradle.publish' version '0.0.5'
 }
 
 group = 'com.exactpro.th2'
 version = release_version
 
-sourceCompatibility = JavaVersion.VERSION_11
-targetCompatibility = JavaVersion.VERSION_11
+kotlin {
+    jvmToolchain(11)
+}
 
 repositories {
     mavenCentral()
@@ -35,7 +33,6 @@ repositories {
 }
 
 dependencies {
-    api platform('com.exactpro.th2:bom:4.6.0')
 
     // Grpc and Protobuf
     api "com.google.protobuf:protobuf-java-util"
@@ -59,120 +56,12 @@ dependencies {
     testImplementation 'org.junit.jupiter:junit-jupiter:5.10.2'
 }
 
-manifest {
-    attributes(
-            'Created-By': "${System.getProperty('java.version')} (${System.getProperty('java.vendor')})",
-            'Specification-Title': '',
-            'Specification-Vendor': 'Exactpro Systems LLC',
-            'Implementation-Title': project.archivesBaseName,
-            'Implementation-Vendor': 'Exactpro Systems LLC',
-            'Implementation-Vendor-Id': 'com.exactpro',
-            'Implementation-Version': project.version
-    )
-}
-
 test {
     useJUnitPlatform()
 }
 
-java {
-    withJavadocJar()
-    withSourcesJar()
-}
-
 javadoc {
     (options as StandardJavadocDocletOptions).addBooleanOption("html5", true)
-}
-
-// conditionals for publications
-tasks.withType(PublishToMavenRepository).configureEach {
-    onlyIf {
-        (repository == publishing.repositories.nexusRepository &&
-                project.hasProperty('nexus_user') &&
-                project.hasProperty('nexus_password') &&
-                project.hasProperty('nexus_url')) ||
-                (repository == publishing.repositories.sonatype &&
-                        project.hasProperty('sonatypeUsername') &&
-                        project.hasProperty('sonatypePassword'))
-    }
-}
-tasks.withType(Sign).configureEach {
-    onlyIf {
-        project.hasProperty('signingKey') &&
-                project.hasProperty('signingPassword')
-    }
-}
-// disable running task 'initializeSonatypeStagingRepository' on a gitlab
-tasks.configureEach { task ->
-    if (task.name == 'initializeSonatypeStagingRepository' &&
-            !(project.hasProperty('sonatypeUsername') && project.hasProperty('sonatypePassword'))
-    ) {
-        task.enabled = false
-    }
-}
-
-publishing {
-    publications {
-        mavenJava(MavenPublication) {
-            from(components.java)
-            pom {
-                name = rootProject.name
-                packaging = 'jar'
-                description = rootProject.description
-                url = vcs_url
-                scm {
-                    url = vcs_url
-                }
-                licenses {
-                    license {
-                        name = 'The Apache License, Version 2.0'
-                        url = 'http://www.apache.org/licenses/LICENSE-2.0.txt'
-                    }
-                }
-                developers {
-                    developer {
-                        id = 'developer'
-                        name = 'developer'
-                        email = 'developer@exactpro.com'
-                    }
-                }
-                scm {
-                    url = vcs_url
-                }
-            }
-        }
-    }
-    repositories {
-        //Nexus repo to publish from gitlab
-        maven {
-            name = 'nexusRepository'
-            credentials {
-                username = project.findProperty('nexus_user')
-                password = project.findProperty('nexus_password')
-            }
-            url = project.findProperty('nexus_url')
-        }
-    }
-}
-
-nexusPublishing {
-    repositories {
-        sonatype {
-            nexusUrl.set(uri("https://s01.oss.sonatype.org/service/local/"))
-            snapshotRepositoryUrl.set(uri("https://s01.oss.sonatype.org/content/repositories/snapshots/"))
-        }
-    }
-}
-
-signing {
-    String signingKey = findProperty("signingKey")
-    String signingPassword = findProperty("signingPassword")
-    useInMemoryPgpKeys(signingKey, signingPassword)
-    sign publishing.publications.mavenJava
-}
-
-compileKotlin {
-    kotlinOptions.jvmTarget = "11"
 }
 
 mainClassName = "com.exactpro.th2.service.generator.protoc.Main"
@@ -180,32 +69,6 @@ mainClassName = "com.exactpro.th2.service.generator.protoc.Main"
 shadowJar {
     mergeServiceFiles()
 
-    manifest {
-        attributes(
-                'Created-By': "${System.getProperty('java.version')} (${System.getProperty('java.vendor')})",
-                'Specification-Title': '',
-                'Specification-Vendor': 'Exactpro Systems LLC',
-                'Implementation-Title': project.archivesBaseName,
-                'Implementation-Vendor': 'Exactpro Systems LLC',
-                'Implementation-Vendor-Id': 'com.exactpro',
-                'Implementation-Version': project.version
-        )
-    }
-
     archiveFileName = project.name
     destinationDirectory = "$buildDir/artifacts" as File
-}
-
-dependencyLocking {
-    lockAllConfigurations()
-}
-
-dependencyCheck {
-    formats = ['SARIF', 'JSON', 'HTML']
-    failBuildOnCVSS = 5
-    analyzers {
-        assemblyEnabled = false
-        nugetconfEnabled = false
-        nodeEnabled = false
-    }
 }
