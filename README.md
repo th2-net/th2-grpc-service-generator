@@ -74,6 +74,10 @@ protobuf {
 
 ## Release notes
 
+### 3.6.1
+
+* Update bom 4.6.0 -> 4.6.1
+
 ### 3.6.0
 
 * Update kotlin 1.6.21 -> 1.8.22
