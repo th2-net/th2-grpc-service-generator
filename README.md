@@ -1,4 +1,4 @@
-# Overview (3.5.1)
+# Overview (3.7.0)
 
 This project implements a **protoc** plugin to generate services for gRPC router. It generates wrappers for Java's and
 Python's gRPC implementation. You can plug it directly to protoc or run it from the command line itself.
@@ -73,6 +73,10 @@ protobuf {
 ```
 
 ## Release notes
+
+### 3.7.0
+
+* Fixed "ServiceService" service class naming problem.
 
 ### 3.6.1
 
