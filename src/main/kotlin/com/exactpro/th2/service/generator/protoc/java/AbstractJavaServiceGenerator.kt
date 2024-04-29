@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2022 Exactpro (Exactpro Systems Limited)
+ * Copyright 2020-2024 Exactpro (Exactpro Systems Limited)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -29,11 +29,6 @@ import java.nio.file.Path
 import java.util.Properties
 
 abstract class AbstractJavaServiceGenerator : Generator {
-
-    companion object {
-        private const val ENABLE_JAVA_GENERATION_OPTION_NAME = "enableJava"
-    }
-
     private var enableGeneration = true
 
     override fun init(prop: Properties) {
@@ -42,36 +37,25 @@ abstract class AbstractJavaServiceGenerator : Generator {
         }
     }
 
-    override fun generate(fileDescriptor: FileDescriptorProto, messageNameToJavaPackage: Map<String, String>): List<FileSpec> {
-
-        if (!enableGeneration) {
-            return emptyList()
+    override fun generate(fileDescriptor: FileDescriptorProto, messageNameToJavaPackage: Map<String, String>): List<FileSpec> =
+        if (enableGeneration) {
+            val javaPackage = fileDescriptor.javaPackage()
+            fileDescriptor.serviceList.flatMap {
+                    service -> generateForService(service, javaPackage, messageNameToJavaPackage)
+            }
+        } else {
+            emptyList()
         }
-
-        val javaPackage = fileDescriptor.javaPackage()
-
-        return fileDescriptor.serviceList.let {
-            if (it.isNotEmpty()) {
-                it.flatMap { service -> generateForService(service, javaPackage, messageNameToJavaPackage) }
-            } else emptyList()
-        }
-    }
 
     protected abstract fun generateForService(service: ServiceDescriptorProto,
                                               javaPackage: String,
                                               messageNameToJavaPackage: Map<String, String>): List<FileSpec>
 
-
-    protected fun getBlockingServiceName(protoName: String): String = "${protoName}Service"
-
-    protected fun getAsyncServiceName(protoName: String): String = "Async${protoName}Service"
-
+    protected fun getBlockingServiceName(protoName: String): String = protoName + if (protoName.endsWith("Service")) "" else "Service"
+    protected fun getAsyncServiceName(protoName: String): String = "Async" + getBlockingServiceName(protoName)
     protected fun getBlockingDefaultImplName(protoName: String): String = "${protoName}DefaultBlockingImpl"
-
     protected fun getAsyncDefaultImplName(protoName: String): String = "${protoName}DefaultAsyncImpl"
-
     protected fun getBlockingStubClassName(javaPackage: String, protoName: String): ClassName = ClassName.get(javaPackage, "${protoName}Grpc", "${protoName}BlockingStub")
-
     protected fun getAsyncStubClassName(javaPackage: String, protoName: String): ClassName = ClassName.get(javaPackage, "${protoName}Grpc", "${protoName}Stub")
 
     /**
@@ -91,7 +75,7 @@ abstract class AbstractJavaServiceGenerator : Generator {
         }
     }
 
-    protected fun createPathToJavaFile(javaPackage: String, javaClassName: String): String = Path
+    private fun createPathToJavaFile(javaPackage: String, javaClassName: String): String = Path
         .of(
             javaPackage.replace('.', '/'),
             "$javaClassName.java")
@@ -102,4 +86,8 @@ abstract class AbstractJavaServiceGenerator : Generator {
         ?.resolve("$javaClassName.java")
         ?.toString()
         ?: createPathToJavaFile(javaPackage, javaClassName)
+
+    companion object {
+        private const val ENABLE_JAVA_GENERATION_OPTION_NAME = "enableJava"
+    }
 }

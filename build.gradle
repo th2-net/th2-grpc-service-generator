@@ -5,7 +5,7 @@ plugins {
     id 'maven-publish'
     id 'org.jetbrains.kotlin.jvm' version "1.8.22"
     id 'com.github.johnrengelman.shadow' version '7.1.2'
-    id 'com.exactpro.th2.gradle.publish' version '0.0.5'
+    id 'com.exactpro.th2.gradle.publish' version '0.0.6'
 }
 
 group = 'com.exactpro.th2'
@@ -33,24 +33,15 @@ repositories {
 }
 
 dependencies {
-
     // Grpc and Protobuf
     api "com.google.protobuf:protobuf-java-util"
     api "io.grpc:grpc-stub"
 
-
     implementation "io.netty:netty-codec-http2"
-
     implementation "com.google.protobuf:protobuf-java"
-
     implementation "org.slf4j:slf4j-api"
-
-    //Kotlin
     implementation 'io.github.microutils:kotlin-logging:3.0.5'
-
-    //For generation java code. License: Apache 2.0
-    implementation "com.squareup:javapoet:1.13.0"
-
+    implementation "com.squareup:javapoet:1.13.0" // For generation java code. License: Apache 2.0
     implementation "commons-io:commons-io"
 
     testImplementation 'org.junit.jupiter:junit-jupiter:5.10.2'

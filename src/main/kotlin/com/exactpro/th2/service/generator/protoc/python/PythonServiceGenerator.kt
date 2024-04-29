@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2020 Exactpro (Exactpro Systems Limited)
+ * Copyright 2020-2024 Exactpro (Exactpro Systems Limited)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,6 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package com.exactpro.th2.service.generator.protoc.python
 
 import com.exactpro.th2.service.generator.protoc.FileSpec
@@ -23,14 +24,7 @@ import java.nio.file.Path
 import java.util.Properties
 
 class PythonServiceGenerator : Generator {
-
-    companion object {
-        private const val ROOT_PATH_OPTION_NAME = "pythonPath"
-        private const val ENABLE_PYTHON_GENERATION_OPTION_NAME = "enablePython"
-    }
-
     private var enableGeneration = true
-
     private var rootPath: Path? = null
 
     override fun init(prop: Properties) {
@@ -41,7 +35,6 @@ class PythonServiceGenerator : Generator {
     }
 
     override fun generate(fileDescriptor: FileDescriptorProto, messageNameToJavaPackage: Map<String, String>): List<FileSpec> {
-
         if (!enableGeneration) {
             return emptyList()
         }
@@ -50,14 +43,15 @@ class PythonServiceGenerator : Generator {
         val importFilePrefix = FilenameUtils.getBaseName(fileName)
 
         return fileDescriptor.serviceList.map { service ->
-            val builder = StringBuilder()
-            builder.append("""
+            val serviceClassName = service.name + if (service.name.endsWith("Service")) "" else "Service"
+
+            val builder = StringBuilder("""
             from . import ${importFilePrefix}_pb2_grpc as importStub
             
-            class ${service.name}Service(object):
+            class ${serviceClassName}(object):
             
                 def __init__(self, router):
-                    self.connector = router.get_connection(${service.name}Service, importStub.${service.name}Stub)
+                    self.connector = router.get_connection(${serviceClassName}, importStub.${service.name}Stub)
             """.trimIndent())
 
             service.methodList.forEach { method ->
@@ -67,9 +61,10 @@ class PythonServiceGenerator : Generator {
 
             PythonFileSpec(rootPath, FilenameUtils.getPath(fileName), service.name, builder.toString())
         }
-
     }
 
-
-
+    companion object {
+        private const val ROOT_PATH_OPTION_NAME = "pythonPath"
+        private const val ENABLE_PYTHON_GENERATION_OPTION_NAME = "enablePython"
+    }
 }
