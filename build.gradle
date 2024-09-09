@@ -178,11 +178,9 @@ signing {
     sign publishing.publications.mavenJava
 }
 
-compileKotlin {
-    kotlinOptions.jvmTarget = "11"
+application {
+    mainClassName = "com.exactpro.th2.service.generator.protoc.Main"
 }
-
-mainClassName = "com.exactpro.th2.service.generator.protoc.Main"
 
 shadowJar {
     mergeServiceFiles()
