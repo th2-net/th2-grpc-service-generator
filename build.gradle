@@ -1,11 +1,20 @@
+import com.github.jk1.license.filter.LicenseBundleNormalizer
+import com.github.jk1.license.render.JsonReportRenderer
+
 plugins {
+    id 'java'
     id 'idea'
     id 'application'
     id 'java-library'
     id 'maven-publish'
+    id "io.github.gradle-nexus.publish-plugin" version "2.0.0"
+    id 'signing'
     id 'org.jetbrains.kotlin.jvm' version "1.8.22"
-    id 'com.github.johnrengelman.shadow' version '7.1.2'
-    id 'com.exactpro.th2.gradle.publish' version '0.0.5'
+    id 'com.github.johnrengelman.shadow' version '8.1.1'
+    id "org.owasp.dependencycheck" version "10.0.4"
+    id 'com.github.jk1.dependency-license-report' version "2.9"
+    id 'de.undercouch.download' version "5.6.0"
+    id "com.gorylenko.gradle-git-properties" version "2.4.2"
 }
 
 group = 'com.exactpro.th2'
@@ -33,6 +42,7 @@ repositories {
 }
 
 dependencies {
+    api platform('com.exactpro.th2:bom:4.7.0')
 
     // Grpc and Protobuf
     api "com.google.protobuf:protobuf-java-util"
@@ -46,22 +56,130 @@ dependencies {
     implementation "org.slf4j:slf4j-api"
 
     //Kotlin
-    implementation 'io.github.microutils:kotlin-logging:3.0.5'
+    implementation 'io.github.oshai:kotlin-logging:5.1.4'
 
     //For generation java code. License: Apache 2.0
     implementation "com.squareup:javapoet:1.13.0"
 
     implementation "commons-io:commons-io"
 
-    testImplementation 'org.junit.jupiter:junit-jupiter:5.10.2'
+    testImplementation 'org.junit.jupiter:junit-jupiter:5.11.0'
+}
+
+manifest {
+    attributes(
+            'Created-By': "${System.getProperty('java.version')} (${System.getProperty('java.vendor')})",
+            'Specification-Title': '',
+            'Specification-Vendor': 'Exactpro Systems LLC',
+            'Implementation-Title': project.archivesBaseName,
+            'Implementation-Vendor': 'Exactpro Systems LLC',
+            'Implementation-Vendor-Id': 'com.exactpro',
+            'Implementation-Version': project.version
+    )
 }
 
 test {
     useJUnitPlatform()
 }
 
+java {
+    withJavadocJar()
+    withSourcesJar()
+}
+
 javadoc {
     (options as StandardJavadocDocletOptions).addBooleanOption("html5", true)
+}
+
+// conditionals for publications
+tasks.withType(PublishToMavenRepository).configureEach {
+    onlyIf {
+        (repository == publishing.repositories.nexusRepository &&
+                project.hasProperty('nexus_user') &&
+                project.hasProperty('nexus_password') &&
+                project.hasProperty('nexus_url')) ||
+                (repository == publishing.repositories.sonatype &&
+                        project.hasProperty('sonatypeUsername') &&
+                        project.hasProperty('sonatypePassword'))
+    }
+}
+tasks.withType(Sign).configureEach {
+    onlyIf {
+        project.hasProperty('signingKey') &&
+                project.hasProperty('signingPassword')
+    }
+}
+// disable running task 'initializeSonatypeStagingRepository' on a gitlab
+tasks.configureEach { task ->
+    if (task.name == 'initializeSonatypeStagingRepository' &&
+            !(project.hasProperty('sonatypeUsername') && project.hasProperty('sonatypePassword'))
+    ) {
+        task.enabled = false
+    }
+}
+
+publishing {
+    publications {
+        mavenJava(MavenPublication) {
+            from(components.java)
+            pom {
+                name = rootProject.name
+                packaging = 'jar'
+                description = rootProject.description
+                url = vcs_url
+                scm {
+                    url = vcs_url
+                }
+                licenses {
+                    license {
+                        name = 'The Apache License, Version 2.0'
+                        url = 'http://www.apache.org/licenses/LICENSE-2.0.txt'
+                    }
+                }
+                developers {
+                    developer {
+                        id = 'developer'
+                        name = 'developer'
+                        email = 'developer@exactpro.com'
+                    }
+                }
+                scm {
+                    url = vcs_url
+                }
+            }
+        }
+    }
+    repositories {
+        //Nexus repo to publish from gitlab
+        maven {
+            name = 'nexusRepository'
+            credentials {
+                username = project.findProperty('nexus_user')
+                password = project.findProperty('nexus_password')
+            }
+            url = project.findProperty('nexus_url')
+        }
+    }
+}
+
+nexusPublishing {
+    repositories {
+        sonatype {
+            nexusUrl.set(uri("https://s01.oss.sonatype.org/service/local/"))
+            snapshotRepositoryUrl.set(uri("https://s01.oss.sonatype.org/content/repositories/snapshots/"))
+        }
+    }
+}
+
+signing {
+    String signingKey = findProperty("signingKey")
+    String signingPassword = findProperty("signingPassword")
+    useInMemoryPgpKeys(signingKey, signingPassword)
+    sign publishing.publications.mavenJava
+}
+
+compileKotlin {
+    kotlinOptions.jvmTarget = "11"
 }
 
 mainClassName = "com.exactpro.th2.service.generator.protoc.Main"
@@ -69,6 +187,59 @@ mainClassName = "com.exactpro.th2.service.generator.protoc.Main"
 shadowJar {
     mergeServiceFiles()
 
+    manifest {
+        attributes(
+                'Created-By': "${System.getProperty('java.version')} (${System.getProperty('java.vendor')})",
+                'Specification-Title': '',
+                'Specification-Vendor': 'Exactpro Systems LLC',
+                'Implementation-Title': project.archivesBaseName,
+                'Implementation-Vendor': 'Exactpro Systems LLC',
+                'Implementation-Vendor-Id': 'com.exactpro',
+                'Implementation-Version': project.version
+        )
+    }
+
     archiveFileName = project.name
     destinationDirectory = "$buildDir/artifacts" as File
+}
+
+dependencyLocking {
+    lockAllConfigurations()
+}
+
+dependencyCheck {
+    formats = ['SARIF', 'JSON', 'HTML']
+    failBuildOnCVSS = 5
+
+    nvd {
+        apiKey = project.findProperty("nvdApiKey") as String
+        delay = Integer.valueOf(project.findProperty("nvdDelay") as String)
+    }
+
+    analyzers {
+        assemblyEnabled = false
+        nugetconfEnabled = false
+        nodeEnabled = false
+    }
+}
+
+licenseReport {
+    def licenseNormalizerBundlePath = "$buildDir/license-normalizer-bundle.json"
+
+    if (!file(licenseNormalizerBundlePath).exists()) {
+        download.run {
+            src 'https://raw.githubusercontent.com/th2-net/.github/main/license-compliance/gradle-license-report/license-normalizer-bundle.json'
+            dest "$buildDir/license-normalizer-bundle.json"
+            overwrite false
+        }
+    }
+
+    filters = [
+            new LicenseBundleNormalizer(licenseNormalizerBundlePath, false)
+    ]
+    renderers = [
+            new JsonReportRenderer('licenses.json', false),
+    ]
+    excludeOwnGroup = false
+    allowedLicensesFile = new URL("https://raw.githubusercontent.com/th2-net/.github/main/license-compliance/gradle-license-report/allowed-licenses.json")
 }

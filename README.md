@@ -1,4 +1,4 @@
-# Overview (3.5.1)
+# Overview (3.7.0)
 
 This project implements a **protoc** plugin to generate services for gRPC router. It generates wrappers for Java's and
 Python's gRPC implementation. You can plug it directly to protoc or run it from the command line itself.
@@ -73,6 +73,20 @@ protobuf {
 ```
 
 ## Release notes
+
+### 3.7.0
+
+* Removed th2 gradle plugin to avoid cycle dependency 
+* Updated libs:
+  * bom: `4.7.0`
+  * kotlin-logging: `5.1.4`
+* Updated plugins:
+  * io.github.gradle-nexus.publish-plugin: `2.0.0`
+  * com.github.johnrengelman.shadow: `8.1.1`
+  * org.owasp.dependencycheck: `10.0.4`
+  * com.github.jk1.dependency-license-report:`2.9`
+  * de.undercouch.download: `5.6.0`
+  * com.gorylenko.gradle-git-properties: `2.4.2`
 
 ### 3.6.1
 
