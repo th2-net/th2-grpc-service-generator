@@ -78,12 +78,12 @@ protobuf {
 
 * Removed th2 gradle plugin to avoid cycle dependency 
 * Updated libs:
-  * bom: `4.7.0`
+  * bom: `4.9.0`
   * kotlin-logging: `5.1.4`
 * Updated plugins:
   * io.github.gradle-nexus.publish-plugin: `2.0.0`
   * com.github.johnrengelman.shadow: `8.1.1`
-  * org.owasp.dependencycheck: `10.0.4`
+  * org.owasp.dependencycheck: `11.1.0`
   * com.github.jk1.dependency-license-report:`2.9`
   * de.undercouch.download: `5.6.0`
   * com.gorylenko.gradle-git-properties: `2.4.2`
