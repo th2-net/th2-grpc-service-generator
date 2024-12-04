@@ -11,7 +11,7 @@ plugins {
     id 'signing'
     id 'org.jetbrains.kotlin.jvm' version "1.8.22"
     id 'com.github.johnrengelman.shadow' version '8.1.1'
-    id "org.owasp.dependencycheck" version "10.0.4"
+    id "org.owasp.dependencycheck" version "11.1.0"
     id 'com.github.jk1.dependency-license-report' version "2.9"
     id 'de.undercouch.download' version "5.6.0"
     id "com.gorylenko.gradle-git-properties" version "2.4.2"
@@ -42,7 +42,7 @@ repositories {
 }
 
 dependencies {
-    api platform('com.exactpro.th2:bom:4.7.0')
+    api platform('com.exactpro.th2:bom:4.9.0')
 
     // Grpc and Protobuf
     api "com.google.protobuf:protobuf-java-util"
@@ -63,7 +63,7 @@ dependencies {
 
     implementation "commons-io:commons-io"
 
-    testImplementation 'org.junit.jupiter:junit-jupiter:5.11.0'
+    testImplementation 'org.junit.jupiter:junit-jupiter:5.11.3'
 }
 
 manifest {
