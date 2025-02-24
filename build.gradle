@@ -11,7 +11,7 @@ plugins {
     id 'signing'
     id 'org.jetbrains.kotlin.jvm' version "1.8.22"
     id 'com.github.johnrengelman.shadow' version '8.1.1'
-    id "org.owasp.dependencycheck" version "12.0.2"
+    id "org.owasp.dependencycheck" version "12.1.0"
     id 'com.github.jk1.dependency-license-report' version "2.9"
     id 'de.undercouch.download' version "5.6.0"
     id "com.gorylenko.gradle-git-properties" version "2.4.2"
@@ -208,6 +208,7 @@ dependencyLocking {
 dependencyCheck {
     formats = ['SARIF', 'JSON', 'HTML']
     failBuildOnCVSS = 5
+    suppressionFile = file("suppressions.xml")
 
     nvd {
         apiKey = project.findProperty("nvdApiKey") as String

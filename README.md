@@ -78,8 +78,11 @@ protobuf {
 
 * Updated libs:
   * bom: `4.10.0`
+    * Added suppressions:
+      * CVE-2025-25193 - This vulnerability does not affect us because this library don’t use netty for reading environment files.
+      * CVE-2025-24970 - this library doesn’t use SSL.
 * Updated plugins:
-  * org.owasp.dependencycheck: `12.0.2`
+  * org.owasp.dependencycheck: `12.1.0`
 
 ### 3.7.0
 
