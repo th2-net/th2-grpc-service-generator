@@ -208,16 +208,21 @@ dependencyLocking {
 dependencyCheck {
     formats = ['SARIF', 'JSON', 'HTML']
     failBuildOnCVSS = 5
+    suppressionFile = file("suppressions.xml")
 
     nvd {
         apiKey = project.findProperty("nvdApiKey") as String
         delay = Integer.valueOf(project.findProperty("nvdDelay") as String)
+        datafeedUrl = project.findProperty("nvdDatafeedUrl") as String
     }
 
     analyzers {
         assemblyEnabled = false
         nugetconfEnabled = false
         nodeEnabled = false
+        kev {
+            url = project.findProperty("analyzersKnownExploitedURL") as String
+        }
     }
 }
 
