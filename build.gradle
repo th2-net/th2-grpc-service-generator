@@ -208,6 +208,7 @@ dependencyLocking {
 dependencyCheck {
     formats = ['SARIF', 'JSON', 'HTML']
     failBuildOnCVSS = 5
+    suppressionFile = file("suppressions.xml")
 
     nvd {
         apiKey = project.findProperty("nvdApiKey") as String

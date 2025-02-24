@@ -1,4 +1,4 @@
-# Overview (3.7.0)
+# Overview (3.8.0)
 
 This project implements a **protoc** plugin to generate services for gRPC router. It generates wrappers for Java's and
 Python's gRPC implementation. You can plug it directly to protoc or run it from the command line itself.
@@ -73,6 +73,16 @@ protobuf {
 ```
 
 ## Release notes
+
+### 3.8.0
+
+* Updated libs:
+  * bom: `4.10.0`
+    * Added suppressions:
+      * CVE-2025-25193 - This vulnerability does not affect us because this library don’t use netty for reading environment files.
+      * CVE-2025-24970 - this library doesn’t use SSL.
+* Updated plugins:
+  * org.owasp.dependencycheck: `12.1.0`
 
 ### 3.7.0
 
