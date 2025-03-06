@@ -80,6 +80,7 @@ protobuf {
   * bom: `4.11.0`
 * Updated plugins:
   * org.owasp.dependencycheck: `12.1.0`
+  * Migrate to th2 Gradle plugin `0.2.3`
 
 ### 3.7.0
 
