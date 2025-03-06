@@ -45,7 +45,7 @@ dependencies {
     implementation "org.slf4j:slf4j-api"
 
     //Kotlin
-    implementation 'io.github.oshai:kotlin-logging:5.1.4'
+    implementation 'io.github.oshai:kotlin-logging:7.0.4'
 
     //For generation java code. License: Apache 2.0
     implementation "com.squareup:javapoet:1.13.0"
