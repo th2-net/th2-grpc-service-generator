@@ -48,7 +48,7 @@ dependencies {
 
     implementation "commons-io:commons-io"
 
-    testImplementation 'org.junit.jupiter:junit-jupiter:5.13.2'
+    testImplementation 'org.junit.jupiter:junit-jupiter:5.13.3'
 }
 
 test {
