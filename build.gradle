@@ -22,7 +22,7 @@ configurations.configureEach {
 }
 
 dependencies {
-    api(libs.th2.bom)
+    api(platform(libs.th2.bom))
     // Grpc and Protobuf
     api "com.google.protobuf:protobuf-java-util"
     api "io.grpc:grpc-stub"
