@@ -4,9 +4,9 @@ plugins {
     id 'java-library'
     id 'maven-publish'
     id 'signing'
-    id 'org.jetbrains.kotlin.jvm' version "1.8.22"
-    id 'com.github.johnrengelman.shadow' version '8.1.1'
-    id 'com.exactpro.th2.gradle.publish' version '0.3.2'
+    alias(libs.plugins.kotlin.jvm)
+    alias(libs.plugins.shadow)
+    alias(libs.plugins.th2.publish)
 }
 
 group = 'com.exactpro.th2'
@@ -14,11 +14,6 @@ version = release_version
 
 repositories {
     mavenCentral()
-    maven {
-        name 'Sonatype_releases'
-        url 'https://s01.oss.sonatype.org/content/repositories/releases/'
-    }
-
 }
 
 configurations.configureEach {
@@ -27,8 +22,6 @@ configurations.configureEach {
 }
 
 dependencies {
-    api platform('com.exactpro.th2:bom:4.12.0')
-
     // Grpc and Protobuf
     api "com.google.protobuf:protobuf-java-util"
     api "io.grpc:grpc-stub"
@@ -41,14 +34,15 @@ dependencies {
     implementation "org.slf4j:slf4j-api"
 
     //Kotlin
-    implementation 'io.github.oshai:kotlin-logging:5.1.4'
+    implementation(libs.kotlin.logging)
 
-    //For generation java code. License: Apache 2.0
-    implementation "com.squareup:javapoet:1.13.0"
+    implementation(libs.javapoet) {
+        because("java code generation")
+    }
 
     implementation "commons-io:commons-io"
 
-    testImplementation 'org.junit.jupiter:junit-jupiter:5.13.2'
+    testImplementation(libs.junit.jupiter)
 }
 
 test {
