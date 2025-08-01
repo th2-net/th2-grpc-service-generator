@@ -33,7 +33,7 @@ th2-cradle-core = { group = "com.exactpro.th2", name = "cradle-core", version.re
 th2-cradle-cassandra = { group = "com.exactpro.th2", name = "cradle-cassandra", version.ref = "cradle" }
 
 javapoet = { group = "com.squareup", name = "javapoet", version = "1.13.0" }
-junit-jupiter = { group = "org.junit.jupiter", name = "junit-jupiter", version = "5.13.2" }
+junit-jupiter = { group = "org.junit.jupiter", name = "junit-jupiter", version = "5.13.4" }
 mockito-kotlin = { group = "org.mockito.kotlin", name = "mockito-kotlin", version = "5.3.1" } # kotlin:1.9.20 is transitive dependency sins 5.4.0
 testcontainers = { group = "org.testcontainers", name = "testcontainers", version.ref = "testcontainers" }
 testcontainers-rabbitmq = { group = "org.testcontainers", name = "rabbitmq", version.ref = "testcontainers" }
