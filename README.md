@@ -74,6 +74,11 @@ protobuf {
 
 ## Release notes
 
+### 3.8.1
+
+* Updated libs:
+  * th2 gradle plugin `0.3.2` (bom: `4.13.1`)
+
 ### 3.8.0
 
 * Updated libs:
