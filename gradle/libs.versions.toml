@@ -1,5 +1,5 @@
 [libraries]
-th2-bom = { group = "com.exactpro.th2", name = "bom", version = "4.13.1" }
+th2-bom = { group = "com.exactpro.th2", name = "bom", version = "4.13.2" }
 kotlin-logging = { group = "io.github.oshai", name = "kotlin-logging", version = "5.1.4" }
 
 javapoet = { group = "com.squareup", name = "javapoet", version = "1.13.0" }
