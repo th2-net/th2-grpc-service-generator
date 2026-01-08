@@ -1,4 +1,4 @@
-# Overview (3.8.3)
+# Overview (3.8.5)
 
 This project implements a **protoc** plugin to generate services for gRPC router. It generates wrappers for Java's and
 Python's gRPC implementation. You can plug it directly to protoc or run it from the command line itself.
@@ -73,6 +73,18 @@ protobuf {
 ```
 
 ## Release notes
+
+### 3.8.5
+
+* Updates libs:
+  * th2 gradle plugin `0.3.11` (bom: `4.14.3`)
+  * bom: `4.14.3`
+
+### 3.8.4
+
+* Updates libs:
+  * th2 gradle plugin `0.3.6` (bom: `4.14.1`)
+  * bom: `4.14.1`
 
 ### 3.8.3
 
