@@ -6,6 +6,6 @@ javapoet = { group = "com.squareup", name = "javapoet", version = "1.13.0" }
 junit-jupiter = { group = "org.junit.jupiter", name = "junit-jupiter", version = "5.14.2" }
 
 [plugins]
-th2-publish = { id = "com.exactpro.th2.gradle.publish", version = "0.3.11" }
+th2-publish = { id = "com.exactpro.th2.gradle.publish", version = "0.3.14" }
 shadow = { id = "com.github.johnrengelman.shadow", version = "8.1.1" }
 kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version = "1.8.22" }
